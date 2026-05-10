@@ -2,12 +2,26 @@
 # Laravel 11 + Vite/Vue + Inertia — untuk Coolify (PostgreSQL di layanan terpisah).
 # Set di Coolify: APP_KEY, APP_URL, DB_*, dll. Post-deploy: php artisan migrate --force
 
+# Ziggy diimpor dari vendor/ di resources/js/app.js; .dockerignore mengabaikan vendor,
+# jadi kita pasang paket Composer sekali di sini dan menyalin hanya tightenco/ziggy ke stage Vite.
+FROM composer:2 AS ziggy_vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+ENV COMPOSER_ALLOW_SUPERUSER=1
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --prefer-dist \
+    --no-interaction \
+    --ignore-platform-reqs
+
 # --- Frontend (Vite)
 FROM node:22-bookworm-slim AS frontend
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit
 COPY . .
+COPY --from=ziggy_vendor /app/vendor/tightenco/ziggy ./vendor/tightenco/ziggy
 RUN npm run build
 
 # --- PHP + Nginx + Supervisor (PHP 8.4 — selaras dengan runtime produksi)
