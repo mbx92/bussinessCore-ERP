@@ -26,6 +26,9 @@ import {
   Squares2X2Icon,
   IdentificationIcon,
   CreditCardIcon,
+  PrinterIcon,
+  ShareIcon,
+  RectangleStackIcon,
 } from '@heroicons/vue/24/outline';
 
 defineProps({
@@ -57,6 +60,9 @@ const iconMap = {
   sparkles: SparklesIcon,
   identification: IdentificationIcon,
   'credit-card': CreditCardIcon,
+  printer: PrinterIcon,
+  share: ShareIcon,
+  'rectangle-stack': RectangleStackIcon,
 };
 
 const iconFor = (menu) => iconMap[menu.icon] ?? Squares2X2Icon;

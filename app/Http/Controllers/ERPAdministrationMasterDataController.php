@@ -4,15 +4,25 @@ namespace App\Http\Controllers;
 
 use App\ERP\Core\Models\DocumentSequence;
 use App\ERP\Inventory\Models\Warehouse;
-use App\Models\ErpSetting;
 use App\Models\ErpChatParserRule;
+use App\Models\ErpSetting;
+use App\Models\LabelProfile;
 use App\Models\LandingSite;
 use App\Models\PaymentMethod;
+use App\Services\LanEscPosPrinter;
+use App\Services\LanTsplPrinter;
+use App\Services\ServerMetricsService;
+use App\Services\ThermalPosReceiptData;
+use App\Services\ThermalPosReceiptRenderer;
+use App\Services\WindowsSmbRawPrinter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class ERPAdministrationMasterDataController extends Controller
 {
@@ -146,14 +156,14 @@ class ERPAdministrationMasterDataController extends Controller
     public function storeParserRule(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:120',
-            'intent_key'    => 'required|string|max:60',
-            'keywords'      => 'required|array|min:1',
-            'keywords.*'    => 'required|string|max:60',
-            'match_mode'    => 'required|in:and,or',
-            'priority'      => 'required|integer|min:1|max:9999',
-            'is_active'     => 'required|boolean',
-            'notes'         => 'nullable|string|max:500',
+            'name' => 'required|string|max:120',
+            'intent_key' => 'required|string|max:60',
+            'keywords' => 'required|array|min:1',
+            'keywords.*' => 'required|string|max:60',
+            'match_mode' => 'required|in:and,or',
+            'priority' => 'required|integer|min:1|max:9999',
+            'is_active' => 'required|boolean',
+            'notes' => 'nullable|string|max:500',
             'response_text' => 'nullable|string|max:2000',
         ]);
 
@@ -172,14 +182,14 @@ class ERPAdministrationMasterDataController extends Controller
     public function updateParserRule(Request $request, ErpChatParserRule $parserRule): RedirectResponse
     {
         $validated = $request->validate([
-            'name'          => 'required|string|max:120',
-            'intent_key'    => 'required|string|max:60',
-            'keywords'      => 'required|array|min:1',
-            'keywords.*'    => 'required|string|max:60',
-            'match_mode'    => 'required|in:and,or',
-            'priority'      => 'required|integer|min:1|max:9999',
-            'is_active'     => 'required|boolean',
-            'notes'         => 'nullable|string|max:500',
+            'name' => 'required|string|max:120',
+            'intent_key' => 'required|string|max:60',
+            'keywords' => 'required|array|min:1',
+            'keywords.*' => 'required|string|max:60',
+            'match_mode' => 'required|in:and,or',
+            'priority' => 'required|integer|min:1|max:9999',
+            'is_active' => 'required|boolean',
+            'notes' => 'nullable|string|max:500',
             'response_text' => 'nullable|string|max:2000',
         ]);
 
@@ -284,5 +294,442 @@ class ERPAdministrationMasterDataController extends Controller
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Metode pembayaran berhasil diperbarui.']);
     }
-}
 
+    public function thermalPrinter(): Response
+    {
+        $setting = ErpSetting::query()->first();
+        $renderer = new ThermalPosReceiptRenderer;
+
+        return Inertia::render('ERP/Admin/ThermalPrinter', [
+            'printer' => [
+                'thermal_printer_enabled' => (bool) ($setting?->thermal_printer_enabled ?? false),
+                'thermal_printer_host' => $setting?->thermal_printer_host ?? '',
+                'thermal_printer_port' => (int) ($setting?->thermal_printer_port ?? 9100),
+                'thermal_paper_width' => $setting?->thermal_paper_width ?? '80',
+                'thermal_pos_header_template' => $setting?->thermal_pos_header_template ?? '',
+                'thermal_pos_item_line_template' => $setting?->thermal_pos_item_line_template ?? '',
+                'thermal_pos_footer_template' => $setting?->thermal_pos_footer_template ?? '',
+                'thermal_pos_margin_left_mm' => (string) ($setting?->thermal_pos_margin_left_mm ?? '2.00'),
+                'thermal_pos_header_align' => $setting?->thermal_pos_header_align ?? 'center',
+                'thermal_pos_item_align' => $setting?->thermal_pos_item_align ?? 'left',
+                'thermal_pos_footer_align' => $setting?->thermal_pos_footer_align ?? 'right',
+                'thermal_pos_section_gap' => (int) ($setting?->thermal_pos_section_gap ?? 0),
+                'thermal_pos_header_emphasis' => (bool) ($setting?->thermal_pos_header_emphasis ?? true),
+            ],
+            'thermalTemplateDefaults' => [
+                'header' => $renderer->defaultHeaderTemplate(),
+                'item_line' => $renderer->defaultItemLineTemplate(),
+                'footer' => $renderer->defaultFooterTemplate(),
+            ],
+        ]);
+    }
+
+    public function updateThermalPrinter(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'thermal_printer_enabled' => 'required|boolean',
+            'thermal_printer_host' => [
+                'nullable',
+                'string',
+                'max:64',
+                Rule::when($request->boolean('thermal_printer_enabled'), ['required', 'ip']),
+            ],
+            'thermal_printer_port' => 'required|integer|min:1|max:65535',
+            'thermal_paper_width' => 'required|string|in:58,80',
+            'thermal_pos_header_template' => 'nullable|string|max:16000',
+            'thermal_pos_item_line_template' => 'nullable|string|max:16000',
+            'thermal_pos_footer_template' => 'nullable|string|max:16000',
+            'thermal_pos_margin_left_mm' => 'nullable|numeric|min:0|max:25',
+            'thermal_pos_header_align' => 'required|string|in:left,center,right',
+            'thermal_pos_item_align' => 'required|string|in:left,center,right',
+            'thermal_pos_footer_align' => 'required|string|in:left,center,right',
+            'thermal_pos_section_gap' => 'required|integer|min:0|max:3',
+            'thermal_pos_header_emphasis' => 'required|boolean',
+        ]);
+
+        $setting = ErpSetting::query()->firstOrCreate([], [
+            'app_name' => 'OCN ERP Suite',
+            'app_tagline' => 'Integrated Business Platform',
+        ]);
+
+        $host = isset($validated['thermal_printer_host']) ? trim((string) $validated['thermal_printer_host']) : null;
+        if (! ($validated['thermal_printer_enabled'] ?? false)) {
+            $host = $host ?: null;
+        }
+
+        $setting->update([
+            'thermal_printer_enabled' => $validated['thermal_printer_enabled'],
+            'thermal_printer_host' => $host,
+            'thermal_printer_port' => (int) $validated['thermal_printer_port'],
+            'thermal_paper_width' => $validated['thermal_paper_width'],
+            'thermal_pos_header_template' => $validated['thermal_pos_header_template'] ?? null,
+            'thermal_pos_item_line_template' => $validated['thermal_pos_item_line_template'] ?? null,
+            'thermal_pos_footer_template' => $validated['thermal_pos_footer_template'] ?? null,
+            'thermal_pos_margin_left_mm' => $validated['thermal_pos_margin_left_mm'] ?? 0,
+            'thermal_pos_header_align' => $validated['thermal_pos_header_align'],
+            'thermal_pos_item_align' => $validated['thermal_pos_item_align'],
+            'thermal_pos_footer_align' => $validated['thermal_pos_footer_align'],
+            'thermal_pos_section_gap' => (int) $validated['thermal_pos_section_gap'],
+            'thermal_pos_header_emphasis' => (bool) $validated['thermal_pos_header_emphasis'],
+        ]);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Pengaturan printer thermal LAN berhasil disimpan.']);
+    }
+
+    public function testThermalPrinter(Request $request, LanEscPosPrinter $printer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'thermal_printer_host' => 'required|string|max:64|ip',
+            'thermal_printer_port' => 'required|integer|min:1|max:65535',
+            'thermal_paper_width' => 'required|string|in:58,80',
+        ]);
+
+        try {
+            [$host, $port] = $printer->sendTestReceipt(
+                $validated['thermal_printer_host'],
+                (int) $validated['thermal_printer_port'],
+                'TEST PRINT LAN',
+                $validated['thermal_paper_width'],
+            );
+
+            return back()->with('flash', [
+                'type' => 'success',
+                'message' => "Test print terkirim ke {$host}:{$port}.",
+            ]);
+        } catch (RuntimeException $e) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function testThermalPosReceipt(Request $request, LanEscPosPrinter $printer, ThermalPosReceiptRenderer $renderer): RedirectResponse
+    {
+        $validated = $request->validate([
+            'thermal_printer_host' => 'required|string|max:64|ip',
+            'thermal_printer_port' => 'required|integer|min:1|max:65535',
+            'thermal_paper_width' => 'required|string|in:58,80',
+        ]);
+
+        $setting = ErpSetting::query()->first();
+
+        $template = [
+            'header' => $setting?->thermal_pos_header_template,
+            'item_line' => $setting?->thermal_pos_item_line_template,
+            'footer' => $setting?->thermal_pos_footer_template,
+        ];
+
+        $paper = $printer->normalizePaperWidth($validated['thermal_paper_width']);
+        $cols = $printer->paperColumnWidth($paper);
+
+        $sample = ThermalPosReceiptData::sample()->withAppName((string) ($setting?->app_name ?: 'OCN ERP Suite'));
+        $layout = [
+            'header_align' => $setting?->thermal_pos_header_align ?? 'center',
+            'item_align' => $setting?->thermal_pos_item_align ?? 'left',
+            'footer_align' => $setting?->thermal_pos_footer_align ?? 'right',
+            'section_gap' => (int) ($setting?->thermal_pos_section_gap ?? 0),
+            'header_emphasis' => (bool) ($setting?->thermal_pos_header_emphasis ?? true),
+        ];
+        $marginMm = (float) ($setting?->thermal_pos_margin_left_mm ?? 0);
+        $marginChars = ThermalPosReceiptRenderer::marginCharsFromMm($marginMm, $paper, $cols);
+        $segments = $renderer->buildReceiptSegments($template, $sample, $paper, $cols, $layout);
+
+        try {
+            [$host, $port] = $printer->sendStructuredReceipt(
+                $validated['thermal_printer_host'],
+                (int) $validated['thermal_printer_port'],
+                $segments,
+                $validated['thermal_paper_width'],
+                $marginChars,
+            );
+
+            return back()->with('flash', [
+                'type' => 'success',
+                'message' => "Struk POS (template) terkirim ke {$host}:{$port}.",
+            ]);
+        } catch (RuntimeException $e) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function labelPrinterSmb(): Response
+    {
+        $setting = ErpSetting::query()->with('labelProfile')->first();
+
+        $proto = $setting?->labelProfile?->protocol ?? $setting?->label_smb_protocol ?? 'zpl';
+
+        return Inertia::render('ERP/Admin/LabelPrinterSmb', [
+            'labelSmb' => [
+                'label_smb_enabled' => (bool) ($setting?->label_smb_enabled ?? false),
+                'label_smb_unc' => $setting?->label_smb_unc ?? '',
+                'label_smb_protocol' => in_array($proto, ['zpl', 'epl'], true) ? $proto : 'zpl',
+                'label_smb_profile_id' => $setting?->label_smb_profile_id,
+            ],
+            'labelProfiles' => LabelProfile::query()->orderBy('name')->get([
+                'id', 'name', 'width_mm', 'height_mm', 'dpi', 'margin_left_mm', 'margin_top_mm', 'gap_mm', 'protocol',
+            ]),
+            'serverIsWindows' => PHP_OS_FAMILY === 'Windows',
+        ]);
+    }
+
+    public function updateLabelPrinterSmb(Request $request, WindowsSmbRawPrinter $smb): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_smb_enabled' => 'required|boolean',
+            'label_smb_unc' => ['nullable', 'string', 'max:260'],
+            'label_smb_profile_id' => ['nullable', 'exists:label_profiles,id'],
+        ]);
+
+        $normalized = $smb->normalizeUnc((string) ($validated['label_smb_unc'] ?? ''));
+
+        if ($validated['label_smb_enabled'] && $normalized === '') {
+            return back()
+                ->withErrors(['label_smb_unc' => 'Path UNC wajib diisi saat fitur diaktifkan.'])
+                ->withInput();
+        }
+
+        if ($validated['label_smb_enabled'] && empty($validated['label_smb_profile_id'])) {
+            return back()
+                ->withErrors(['label_smb_profile_id' => 'Pilih profil label (ukuran kertas) saat fitur diaktifkan.'])
+                ->withInput();
+        }
+
+        if ($normalized !== '' && ! $smb->isValidUnc($normalized)) {
+            return back()
+                ->withErrors(['label_smb_unc' => 'Format UNC tidak valid. Gunakan \\\\NAMA-SERVER\\NamaPrinter atau smb://NAMA-SERVER/NamaPrinter'])
+                ->withInput();
+        }
+
+        $setting = ErpSetting::query()->firstOrCreate([], [
+            'app_name' => 'OCN ERP Suite',
+            'app_tagline' => 'Integrated Business Platform',
+        ]);
+
+        $profileId = $validated['label_smb_profile_id'] ?? null;
+        $profile = $profileId ? LabelProfile::query()->find($profileId) : null;
+
+        $setting->update([
+            'label_smb_enabled' => $validated['label_smb_enabled'],
+            'label_smb_unc' => $normalized !== '' ? $normalized : null,
+            'label_smb_profile_id' => $profileId,
+            'label_smb_protocol' => $profile?->protocol ?? $setting->label_smb_protocol ?? 'zpl',
+        ]);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Pengaturan label Windows (SMB) berhasil disimpan.']);
+    }
+
+    public function testLabelPrinterSmb(Request $request, WindowsSmbRawPrinter $smb): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_smb_unc' => 'required|string|max:260',
+            'label_smb_profile_id' => 'required|integer|exists:label_profiles,id',
+        ]);
+
+        $unc = $smb->normalizeUnc($validated['label_smb_unc']);
+        if (! $smb->isValidUnc($unc)) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Path UNC tidak valid untuk uji cetak.',
+            ]);
+        }
+
+        $profile = LabelProfile::query()->findOrFail((int) $validated['label_smb_profile_id']);
+
+        try {
+            $payload = $smb->samplePayloadForProfile($profile);
+            $smb->sendRaw($unc, $payload);
+
+            return back()->with('flash', [
+                'type' => 'success',
+                'message' => 'Data uji ('.strtoupper($profile->protocol).', '.$profile->name.') terkirim ke '.$unc.'.',
+            ]);
+        } catch (RuntimeException $e) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function labelPrinterLan(): Response
+    {
+        $setting = ErpSetting::query()->with(['labelProfile', 'labelLanProfile'])->first();
+
+        return Inertia::render('ERP/Admin/LabelPrinterLan', [
+            'labelLan' => [
+                'label_lan_enabled' => (bool) ($setting?->label_lan_enabled ?? false),
+                'label_lan_host' => $setting?->label_lan_host ?? '',
+                'label_lan_port' => (int) ($setting?->label_lan_port ?? 9100),
+                'label_lan_profile_id' => $setting?->label_lan_profile_id,
+                'label_smb_profile_id' => $setting?->label_smb_profile_id,
+            ],
+            'labelProfiles' => LabelProfile::query()->orderBy('name')->get([
+                'id', 'name', 'width_mm', 'height_mm', 'dpi', 'margin_left_mm', 'margin_top_mm', 'gap_mm', 'protocol',
+            ]),
+        ]);
+    }
+
+    public function updateLabelPrinterLan(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'label_lan_enabled' => 'required|boolean',
+            'label_lan_host' => ['nullable', 'string', 'max:64'],
+            'label_lan_port' => 'required|integer|min:1|max:65535',
+            'label_lan_profile_id' => ['nullable', 'exists:label_profiles,id'],
+        ]);
+
+        $setting = ErpSetting::query()->firstOrCreate([], [
+            'app_name' => 'OCN ERP Suite',
+            'app_tagline' => 'Integrated Business Platform',
+        ]);
+
+        $host = trim((string) ($validated['label_lan_host'] ?? ''));
+
+        if ($validated['label_lan_enabled']) {
+            if ($host === '') {
+                return back()
+                    ->withErrors(['label_lan_host' => 'Alamat IP atau hostname wajib diisi saat Label LAN diaktifkan.'])
+                    ->withInput();
+            }
+            if (! LanTsplPrinter::isValidHost($host)) {
+                return back()
+                    ->withErrors(['label_lan_host' => 'Format alamat tidak valid (gunakan IP atau hostname).'])
+                    ->withInput();
+            }
+            $lanPid = $validated['label_lan_profile_id'] ?? null;
+            if (empty($lanPid) && empty($setting->label_smb_profile_id)) {
+                return back()
+                    ->withErrors(['label_lan_profile_id' => 'Pilih profil label, atau atur profil di halaman Label Windows (SMB) untuk dipakai sebagai ukuran default.'])
+                    ->withInput();
+            }
+        }
+
+        $setting->update([
+            'label_lan_enabled' => $validated['label_lan_enabled'],
+            'label_lan_host' => $validated['label_lan_enabled'] ? $host : null,
+            'label_lan_port' => (int) $validated['label_lan_port'],
+            'label_lan_profile_id' => $validated['label_lan_profile_id'] ?: null,
+        ]);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Pengaturan label LAN (TSPL) berhasil disimpan.']);
+    }
+
+    public function testLabelPrinterLan(LanTsplPrinter $lanTspl): RedirectResponse
+    {
+        $setting = ErpSetting::query()->with(['labelProfile', 'labelLanProfile'])->first();
+
+        if (! ($setting?->label_lan_enabled ?? false)) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Aktifkan Label LAN (TSPL) dan simpan pengaturan (IP, port, profil) terlebih dahulu.',
+            ]);
+        }
+
+        $host = trim((string) ($setting->label_lan_host ?? ''));
+        if ($host === '' || ! LanTsplPrinter::isValidHost($host)) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Alamat printer label LAN belum valid.',
+            ]);
+        }
+
+        $profile = $setting->resolveLabelProfileForLanPrinting();
+        if (! $profile instanceof LabelProfile) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'Profil label tidak ditemukan. Pilih profil di Label LAN atau Label SMB.',
+            ]);
+        }
+
+        try {
+            $payload = $lanTspl->buildSampleJob($profile);
+            [$h, $p] = $lanTspl->send($host, (int) ($setting->label_lan_port ?: 9100), $payload);
+
+            return back()->with('flash', [
+                'type' => 'success',
+                'message' => 'Data uji TSPL ('.$profile->name.') terkirim ke '.$h.':'.$p.'.',
+            ]);
+        } catch (RuntimeException $e) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function maintenanceMode(): Response
+    {
+        $setting = ErpSetting::query()->firstOrCreate([], [
+            'app_name' => 'OCN ERP Suite',
+            'app_tagline' => 'Integrated Business Platform',
+        ]);
+
+        return Inertia::render('ERP/Admin/MaintenanceMode', [
+            'state' => [
+                'maintenance_global_enabled' => (bool) $setting->maintenance_global_enabled,
+                'maintenance_global_message' => (string) ($setting->maintenance_global_message ?? ''),
+                'modules' => $setting->mergedMaintenanceModules(),
+            ],
+            'moduleLabels' => [
+                'accounting' => 'Accounting, kas masuk/keluar, rekonsiliasi',
+                'sales' => 'Sales & POS',
+                'purchasing' => 'Purchasing',
+                'inventory' => 'Inventory & master produk',
+                'projects' => 'Projects, termin, anggaran',
+                'hr' => 'HR & legal',
+                'reporting' => 'Reporting & laporan/export',
+                'administration' => 'Pengaturan ERP (admin)',
+            ],
+        ]);
+    }
+
+    public function updateMaintenanceMode(Request $request): RedirectResponse
+    {
+        $keys = array_keys(ErpSetting::defaultMaintenanceModules());
+        $rules = [
+            'maintenance_global_enabled' => 'required|boolean',
+            'maintenance_global_message' => 'nullable|string|max:2000',
+            'modules' => 'required|array',
+        ];
+        foreach ($keys as $key) {
+            $rules["modules.{$key}.enabled"] = 'required|boolean';
+            $rules["modules.{$key}.message"] = 'nullable|string|max:1000';
+        }
+
+        $validated = $request->validate($rules);
+
+        $clean = ErpSetting::defaultMaintenanceModules();
+        foreach ($keys as $key) {
+            $row = $validated['modules'][$key] ?? [];
+            $msg = isset($row['message']) && is_string($row['message']) ? trim($row['message']) : null;
+            $clean[$key] = [
+                'enabled' => ErpSetting::coerceMaintenanceEnabled($row['enabled'] ?? false),
+                'message' => $msg !== null && $msg !== '' ? Str::limit($msg, 1000) : null,
+            ];
+        }
+
+        $setting = ErpSetting::query()->firstOrCreate([], [
+            'app_name' => 'OCN ERP Suite',
+            'app_tagline' => 'Integrated Business Platform',
+        ]);
+
+        $setting->update([
+            'maintenance_global_enabled' => $validated['maintenance_global_enabled'],
+            'maintenance_global_message' => $validated['maintenance_global_message'] ?? null,
+            'maintenance_modules' => $clean,
+        ]);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Pengaturan maintenance mode berhasil disimpan.']);
+    }
+
+    public function serverMonitoring(ServerMetricsService $metrics): Response
+    {
+        return Inertia::render('ERP/Admin/ServerMonitoring', [
+            'metrics' => $metrics->collect(),
+        ]);
+    }
+}

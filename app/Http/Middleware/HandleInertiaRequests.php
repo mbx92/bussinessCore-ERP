@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\MasterProduct;
 use App\Models\ErpSetting;
+use App\Models\MasterProduct;
 use Illuminate\Http\Request;
-use Inertia\Middleware;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -59,6 +59,12 @@ class HandleInertiaRequests extends Middleware
                 'app_name' => $erpSetting?->app_name ?? 'OCN ERP Suite',
                 'app_tagline' => $erpSetting?->app_tagline ?? 'Integrated Business Platform',
                 'app_logo_url' => $erpSetting?->app_logo_path ? Storage::url($erpSetting->app_logo_path) : null,
+            ],
+            'maintenance' => fn () => [
+                'global' => (bool) ($erpSetting?->maintenance_global_enabled ?? false),
+                'modules' => $erpSetting !== null
+                    ? $erpSetting->mergedMaintenanceModules()
+                    : ErpSetting::defaultMaintenanceModules(),
             ],
         ];
     }

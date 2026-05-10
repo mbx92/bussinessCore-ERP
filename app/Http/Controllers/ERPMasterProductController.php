@@ -2,15 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ErpSetting;
+use App\Models\LabelProfile;
 use App\Models\MasterProduct;
 use App\Models\MasterProductUomMapping;
 use App\Models\ProductCategory;
 use App\Models\Uom;
+use App\Services\LanTsplPrinter;
+use App\Services\WindowsSmbRawPrinter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class ERPMasterProductController extends Controller
 {
@@ -61,12 +66,13 @@ class ERPMasterProductController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'Produk berhasil ditambahkan.']);
     }
 
-    public function show(MasterProduct $masterProduct): Response
+    public function show(MasterProduct $masterProduct, WindowsSmbRawPrinter $smb): Response
     {
         $masterProduct->load('uomMappings');
 
         return Inertia::render('ERP/MasterProducts/Show', [
             'product' => $masterProduct,
+            'barcodePrint' => $this->barcodePrintAvailability($smb, $masterProduct),
             'uomMappings' => $masterProduct->uomMappings->map(fn (MasterProductUomMapping $mapping) => [
                 'id' => $mapping->id,
                 'uom_code' => $mapping->uom_code,
@@ -85,6 +91,85 @@ class ERPMasterProductController extends Controller
                 ->orderBy('name')
                 ->get(['name']),
         ]);
+    }
+
+    public function printBarcode(Request $request, MasterProduct $masterProduct, WindowsSmbRawPrinter $smb, LanTsplPrinter $lanTspl): RedirectResponse
+    {
+        $validated = $request->validate([
+            'copies' => 'required|integer|min:1|max:999',
+        ]);
+
+        $availability = $this->barcodePrintAvailability($smb, $masterProduct);
+        if (! $availability['available']) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $availability['hint'] ?? 'Cetak barcode tidak tersedia.',
+            ]);
+        }
+
+        $setting = ErpSetting::query()->with(['labelProfile', 'labelLanProfile'])->first();
+        if (! $setting) {
+            return back()->with('flash', ['type' => 'error', 'message' => 'Pengaturan ERP belum tersedia.']);
+        }
+
+        $barcodeData = trim((string) ($masterProduct->barcode ?: $masterProduct->sku));
+        if ($barcodeData === '') {
+            return back()->with('flash', ['type' => 'error', 'message' => 'Produk tidak punya barcode atau SKU untuk dicetak.']);
+        }
+
+        $priceLine = 'Rp '.number_format((float) $masterProduct->selling_price, 0, ',', '.');
+
+        try {
+            if ($this->labelLanChannelReady($setting)) {
+                $profile = $setting->resolveLabelProfileForLanPrinting();
+                if (! $profile instanceof LabelProfile) {
+                    return back()->with('flash', ['type' => 'error', 'message' => 'Profil label untuk TSPL tidak ditemukan.']);
+                }
+                $host = trim((string) $setting->label_lan_host);
+                $port = (int) ($setting->label_lan_port ?: 9100);
+                $payload = $lanTspl->buildLabelJob(
+                    $profile,
+                    $barcodeData,
+                    (string) $masterProduct->name,
+                    $priceLine,
+                    (int) $validated['copies'],
+                );
+                [$h, $p] = $lanTspl->send($host, $port, $payload);
+
+                return back()->with('flash', [
+                    'type' => 'success',
+                    'message' => 'Perintah cetak '.(int) $validated['copies'].' label (TSPL) terkirim ke '.$h.':'.$p.'.',
+                ]);
+            }
+
+            if ($this->labelSmbChannelReady($setting, $smb)) {
+                $profile = $setting->labelProfile instanceof LabelProfile ? $setting->labelProfile : null;
+                if ($profile === null) {
+                    return back()->with('flash', ['type' => 'error', 'message' => 'Profil label belum dipilih.']);
+                }
+                $unc = $smb->normalizeUnc((string) ($setting->label_smb_unc ?? ''));
+                $payload = $smb->productBarcodePayloadForProfile(
+                    $profile,
+                    $barcodeData,
+                    (string) $masterProduct->name,
+                    (int) $validated['copies'],
+                    $priceLine,
+                );
+                $smb->sendRaw($unc, $payload);
+
+                return back()->with('flash', [
+                    'type' => 'success',
+                    'message' => 'Perintah cetak '.(int) $validated['copies'].' label barcode terkirim ke printer (SMB).',
+                ]);
+            }
+        } catch (RuntimeException $e) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('flash', ['type' => 'error', 'message' => 'Tidak ada saluran label yang siap (LAN TSPL atau SMB).']);
     }
 
     public function update(Request $request, MasterProduct $masterProduct): RedirectResponse
@@ -206,5 +291,62 @@ class ERPMasterProductController extends Controller
         }
 
         return round($basePrice * $multiplier, 2);
+    }
+
+    /**
+     * @return array{available: bool, hint: string|null}
+     */
+    private function barcodePrintAvailability(WindowsSmbRawPrinter $smb, MasterProduct $product): array
+    {
+        $data = trim((string) ($product->barcode ?: $product->sku));
+        if ($data === '') {
+            return [
+                'available' => false,
+                'hint' => 'Isi barcode atau SKU produk terlebih dahulu.',
+            ];
+        }
+
+        $setting = ErpSetting::query()->with(['labelProfile', 'labelLanProfile'])->first();
+        if ($this->labelLanChannelReady($setting)) {
+            return ['available' => true, 'hint' => null];
+        }
+        if ($this->labelSmbChannelReady($setting, $smb)) {
+            return ['available' => true, 'hint' => null];
+        }
+
+        return [
+            'available' => false,
+            'hint' => 'Atur printer label di Administration: Label LAN (TSPL) dengan IP dan profil, atau Label Windows (SMB) dengan UNC (server Windows).',
+        ];
+    }
+
+    private function labelLanChannelReady(?ErpSetting $setting): bool
+    {
+        if (! $setting?->label_lan_enabled) {
+            return false;
+        }
+        $host = trim((string) ($setting->label_lan_host ?? ''));
+        if ($host === '' || ! LanTsplPrinter::isValidHost($host)) {
+            return false;
+        }
+        $profile = $setting->resolveLabelProfileForLanPrinting();
+
+        return $profile instanceof LabelProfile;
+    }
+
+    private function labelSmbChannelReady(?ErpSetting $setting, WindowsSmbRawPrinter $smb): bool
+    {
+        if (! $smb->supportsUncFromPhp()) {
+            return false;
+        }
+        if (! ($setting?->label_smb_enabled ?? false)) {
+            return false;
+        }
+        $unc = $smb->normalizeUnc((string) ($setting->label_smb_unc ?? ''));
+        if (! $smb->isValidUnc($unc)) {
+            return false;
+        }
+
+        return $setting->labelProfile instanceof LabelProfile;
     }
 }

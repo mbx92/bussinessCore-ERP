@@ -8,6 +8,11 @@ import { useCurrency } from '@/composables/useCurrency';
 
 const props = defineProps({
   product: Object,
+  /** @type {{ available: boolean, hint: string|null }} */
+  barcodePrint: {
+    type: Object,
+    default: () => ({ available: false, hint: null }),
+  },
   uomMappings: Array,
   uoms: Array,
   categories: Array,
@@ -162,6 +167,30 @@ const submitEditProduct = () => {
     onSuccess: () => document.getElementById('modal-edit-product')?.close(),
   });
 };
+
+const printBarcodeForm = useForm({
+  copies: 1,
+});
+
+const hasBarcodeOrSku = computed(() => String(props.product?.barcode || props.product?.sku || '').trim().length > 0);
+
+const openPrintBarcodeModal = () => {
+  if (!hasBarcodeOrSku.value) return;
+  printBarcodeForm.clearErrors();
+  printBarcodeForm.copies = 1;
+  document.getElementById('modal-print-barcode')?.showModal();
+};
+
+const submitPrintBarcode = () => {
+  printBarcodeForm.post(route('erp.master-products.print-barcode', props.product.id), {
+    preserveScroll: true,
+    onSuccess: () => document.getElementById('modal-print-barcode')?.close(),
+  });
+};
+
+const setBarcodeCopies = (n) => {
+  printBarcodeForm.copies = Math.min(999, Math.max(1, Number(n) || 1));
+};
 </script>
 
 <template>
@@ -209,9 +238,22 @@ const submitEditProduct = () => {
             </div>
 
             <div class="grid gap-2 rounded-xl border border-base-300 p-3 text-sm sm:grid-cols-2">
-              <div>
-                <p class="text-xs uppercase text-base-content/50">Barcode</p>
-                <p class="font-mono font-semibold">{{ product.barcode || '-' }}</p>
+              <div class="sm:col-span-2 flex flex-wrap items-end justify-between gap-3 border-b border-base-200 pb-3">
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs uppercase text-base-content/50">Barcode</p>
+                  <p class="font-mono font-semibold">{{ product.barcode || '-' }}</p>
+                  <p v-if="product.barcode" class="mt-1 text-xs text-base-content/50">Data barcode untuk cetak label.</p>
+                  <p v-else class="mt-1 text-xs text-amber-700/90">Kosong — cetak label memakai <span class="font-mono">SKU</span> sebagai isi barcode.</p>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn-outline btn-sm shrink-0"
+                  :disabled="!hasBarcodeOrSku"
+                  :title="!hasBarcodeOrSku ? 'Isi barcode atau SKU dulu' : ''"
+                  @click="openPrintBarcodeModal"
+                >
+                  Cetak barcode
+                </button>
               </div>
               <div>
                 <p class="text-xs uppercase text-base-content/50">Kategori</p>
@@ -453,6 +495,77 @@ const submitEditProduct = () => {
           <div class="modal-action">
             <form method="dialog"><button class="btn btn-ghost">Batal</button></form>
             <button class="btn btn-primary" :disabled="editMappingForm.processing" @click="submitEditMapping">Update Mapping</button>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal-print-barcode" class="modal">
+        <div class="modal-box max-w-sm overflow-hidden rounded-2xl p-0 shadow-xl">
+          <div class="border-b border-base-200 bg-gradient-to-br from-primary/[0.08] to-base-100 px-5 pb-4 pt-5">
+            <div class="flex items-start gap-3">
+              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M4 5h2v14H4V5zm4 0h1v14H8V5zm3 0h4v14h-4V5zm6 0h1v14h-1V5zm3 0h3v14h-3V5z" />
+                </svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="text-base font-bold leading-tight">Cetak barcode</h3>
+                <p class="mt-1 line-clamp-2 text-xs leading-snug text-base-content/65" :title="product.name">{{ product.name }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-5 py-4">
+            <div v-if="!barcodePrint?.available" role="alert" class="alert alert-warning border-amber-200/80 bg-amber-50 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              <span class="text-xs leading-relaxed">{{ barcodePrint?.hint || 'Cetak label tidak tersedia.' }}</span>
+            </div>
+
+            <div v-else class="rounded-xl border border-base-200 bg-base-200/40 p-4">
+              <div class="flex items-center justify-between gap-2 text-xs">
+                <span class="font-medium uppercase tracking-wide text-base-content/50">Isi barcode</span>
+                <span class="truncate font-mono text-sm font-semibold text-base-content" :title="product.barcode || product.sku">{{ product.barcode || product.sku }}</span>
+              </div>
+              <div class="divider my-3 before:h-px after:h-px" />
+              <div class="form-control">
+                <label for="print-barcode-copies" class="label cursor-default px-0 py-0 pb-1 pt-0">
+                  <span class="label-text text-xs font-medium text-base-content/70">Jumlah label</span>
+                </label>
+                <div class="flex flex-wrap items-center gap-2">
+                  <input
+                    id="print-barcode-copies"
+                    v-model.number="printBarcodeForm.copies"
+                    type="number"
+                    min="1"
+                    max="999"
+                    class="input input-bordered input-sm w-[5.5rem] text-center font-mono text-sm tabular-nums"
+                  >
+                  <div class="flex flex-wrap gap-1">
+                    <button type="button" class="btn btn-xs border border-base-300 bg-base-100 px-2 font-mono" @click="setBarcodeCopies(1)">1</button>
+                    <button type="button" class="btn btn-xs border border-base-300 bg-base-100 px-2 font-mono" @click="setBarcodeCopies(5)">5</button>
+                    <button type="button" class="btn btn-xs border border-base-300 bg-base-100 px-2 font-mono" @click="setBarcodeCopies(10)">10</button>
+                    <button type="button" class="btn btn-xs border border-base-300 bg-base-100 px-2 font-mono" @click="setBarcodeCopies(25)">25</button>
+                  </div>
+                </div>
+                <p v-if="printBarcodeForm.errors.copies" class="mt-2 text-xs text-error">{{ printBarcodeForm.errors.copies }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-action mt-0 border-t border-base-200 bg-base-200/25 px-5 py-3">
+            <form method="dialog">
+              <button class="btn btn-ghost btn-sm">Tutup</button>
+            </form>
+            <button
+              type="button"
+              class="btn btn-primary btn-sm min-w-[5.5rem]"
+              :disabled="!barcodePrint?.available || printBarcodeForm.processing"
+              @click="submitPrintBarcode"
+            >
+              {{ printBarcodeForm.processing ? 'Mengirim…' : 'Cetak' }}
+            </button>
           </div>
         </div>
       </dialog>

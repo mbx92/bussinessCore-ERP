@@ -16,6 +16,7 @@ use App\Http\Controllers\ErpSystemLogController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\HREmployeeController;
 use App\Http\Controllers\HRLegalController;
+use App\Http\Controllers\LabelProfileController;
 use App\Http\Controllers\OperationalController;
 use App\Http\Controllers\PersonalModuleController;
 use App\Http\Controllers\ProfileController;
@@ -79,6 +80,7 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/master-products', [ERPMasterProductController::class, 'index'])->name('erp.master-products.index');
         Route::post('erp/master-products', [ERPMasterProductController::class, 'store'])->name('erp.master-products.store');
         Route::get('erp/master-products/{masterProduct}', [ERPMasterProductController::class, 'show'])->name('erp.master-products.show');
+        Route::post('erp/master-products/{masterProduct}/print-barcode', [ERPMasterProductController::class, 'printBarcode'])->name('erp.master-products.print-barcode');
         Route::patch('erp/master-products/{masterProduct}', [ERPMasterProductController::class, 'update'])->name('erp.master-products.update');
         Route::delete('erp/master-products/{masterProduct}', [ERPMasterProductController::class, 'destroy'])->name('erp.master-products.destroy');
         Route::post('erp/master-products/{masterProduct}/uom-mappings', [ERPMasterProductController::class, 'storeUomMapping'])->name('erp.master-products.uom-mappings.store');
@@ -201,6 +203,9 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/administration', [ERPModuleController::class, 'administration'])->name('erp.administration');
         Route::get('erp/admin/erp-settings', [ERPAdministrationMasterDataController::class, 'erpSettings'])->name('erp.admin.erp-settings');
         Route::post('erp/admin/erp-settings', [ERPAdministrationMasterDataController::class, 'updateErpSettings'])->name('erp.admin.erp-settings.update');
+        Route::get('erp/admin/maintenance-mode', [ERPAdministrationMasterDataController::class, 'maintenanceMode'])->name('erp.admin.maintenance-mode');
+        Route::post('erp/admin/maintenance-mode', [ERPAdministrationMasterDataController::class, 'updateMaintenanceMode'])->name('erp.admin.maintenance-mode.update');
+        Route::get('erp/admin/server-monitoring', [ERPAdministrationMasterDataController::class, 'serverMonitoring'])->name('erp.admin.server-monitoring');
         Route::get('erp/admin/document-sequences', [ERPAdministrationMasterDataController::class, 'documentSequences'])->name('erp.admin.document-sequences');
         Route::post('erp/admin/document-sequences', [ERPAdministrationMasterDataController::class, 'storeDocumentSequence'])->name('erp.admin.document-sequences.store');
         Route::patch('erp/admin/document-sequences/{documentSequence}', [ERPAdministrationMasterDataController::class, 'updateDocumentSequence'])->name('erp.admin.document-sequences.update');
@@ -215,6 +220,20 @@ Route::middleware('auth')->group(function () {
         Route::patch('erp/admin/parser-rules/{parserRule}', [ERPAdministrationMasterDataController::class, 'updateParserRule'])->name('erp.admin.parser-rules.update');
         Route::delete('erp/admin/parser-rules/{parserRule}', [ERPAdministrationMasterDataController::class, 'destroyParserRule'])->name('erp.admin.parser-rules.destroy');
         Route::get('erp/admin/system-logs', [ErpSystemLogController::class, 'index'])->name('erp.admin.system-logs.index');
+        Route::get('erp/admin/thermal-printer', [ERPAdministrationMasterDataController::class, 'thermalPrinter'])->name('erp.admin.thermal-printer');
+        Route::post('erp/admin/thermal-printer', [ERPAdministrationMasterDataController::class, 'updateThermalPrinter'])->name('erp.admin.thermal-printer.update');
+        Route::post('erp/admin/thermal-printer/test', [ERPAdministrationMasterDataController::class, 'testThermalPrinter'])->name('erp.admin.thermal-printer.test');
+        Route::post('erp/admin/thermal-printer/test-pos-receipt', [ERPAdministrationMasterDataController::class, 'testThermalPosReceipt'])->name('erp.admin.thermal-printer.test-pos-receipt');
+        Route::get('erp/admin/label-printer-smb', [ERPAdministrationMasterDataController::class, 'labelPrinterSmb'])->name('erp.admin.label-printer-smb');
+        Route::post('erp/admin/label-printer-smb', [ERPAdministrationMasterDataController::class, 'updateLabelPrinterSmb'])->name('erp.admin.label-printer-smb.update');
+        Route::post('erp/admin/label-printer-smb/test', [ERPAdministrationMasterDataController::class, 'testLabelPrinterSmb'])->name('erp.admin.label-printer-smb.test');
+        Route::get('erp/admin/label-printer-lan', [ERPAdministrationMasterDataController::class, 'labelPrinterLan'])->name('erp.admin.label-printer-lan');
+        Route::post('erp/admin/label-printer-lan', [ERPAdministrationMasterDataController::class, 'updateLabelPrinterLan'])->name('erp.admin.label-printer-lan.update');
+        Route::post('erp/admin/label-printer-lan/test', [ERPAdministrationMasterDataController::class, 'testLabelPrinterLan'])->name('erp.admin.label-printer-lan.test');
+        Route::get('erp/admin/label-profiles', [LabelProfileController::class, 'index'])->name('erp.admin.label-profiles');
+        Route::post('erp/admin/label-profiles', [LabelProfileController::class, 'store'])->name('erp.admin.label-profiles.store');
+        Route::patch('erp/admin/label-profiles/{labelProfile}', [LabelProfileController::class, 'update'])->name('erp.admin.label-profiles.update');
+        Route::delete('erp/admin/label-profiles/{labelProfile}', [LabelProfileController::class, 'destroy'])->name('erp.admin.label-profiles.destroy');
     });
 });
 
