@@ -110,8 +110,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
       <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <Link :href="route('erp.sales.project-invoices')" class="btn btn-ghost btn-xs">← Invoice Project</Link>
-            <p class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sales Workspace</p>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sales Workspace</p>
             <h1 class="mt-2 text-3xl font-bold tracking-tight">{{ invoice.number }}</h1>
             <p class="text-base-content/60">{{ invoice.project }} · {{ invoice.client }}</p>
           </div>
@@ -119,6 +118,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
             <StatusBadge :status="invoice.status" />
             <button class="btn btn-outline btn-sm" @click="downloadInvoice">Download Invoice</button>
             <button class="btn btn-primary btn-sm" :disabled="invoice.remaining_amount <= 0" @click="openPaymentModal">Tambah Pembayaran</button>
+            <Link class="btn btn-ghost btn-sm" :href="route('erp.sales.project-invoices')">Back</Link>
           </div>
         </div>
       </div>

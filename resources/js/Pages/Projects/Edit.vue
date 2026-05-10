@@ -24,6 +24,7 @@ const form = useForm({
     started_at: props.project.started_at ?? '',
     finished_at: props.project.finished_at ?? '',
     description: props.project.description ?? '',
+    legal_vault_path: props.project.legal_vault_path ?? '',
     payments: props.can_edit_payments
         ? props.payments.map((p) => ({ percentage: p.percentage, note: p.note ?? '' }))
         : [],
@@ -77,14 +78,14 @@ const submit = () => {
     <AppLayout>
         <div class="max-w-3xl space-y-5">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-center justify-between gap-3 mb-1">
-                    <div class="flex items-center gap-3">
-                    <Link :href="route('projects.show', project.id)" class="btn btn-ghost btn-sm">← Kembali</Link>
-                    </div>
-                    <Link :href="route('erp.projects')" class="btn btn-ghost btn-sm">Back</Link>
-                </div>
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight">Edit Project</h1>
+                <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+                    <h1 class="text-3xl font-bold tracking-tight">Edit Project</h1>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <Link :href="route('projects.show', project.id)" class="btn btn-ghost btn-sm">Kembali</Link>
+                        <Link :href="route('erp.projects')" class="btn btn-ghost btn-sm">Back</Link>
+                    </div>
+                </div>
                 <p class="mt-2 text-sm text-base-content/70">Perbarui informasi project dan jadwal termin sesuai kondisi terbaru.</p>
             </div>
 
@@ -140,6 +141,25 @@ const submit = () => {
                             <label class="label"><span class="label-text font-medium">Deskripsi</span></label>
                             <textarea v-model="form.description" class="textarea textarea-bordered w-full" rows="3" />
                         </div>
+                    </div>
+
+                    <div class="divider">Dokumen Legal (HR)</div>
+                    <div class="rounded-xl border border-base-300 bg-base-200/30 p-4 space-y-2">
+                        <label class="label pt-0"><span class="label-text font-medium">Path folder di Legal Vault</span></label>
+                        <p class="text-xs text-base-content/65 -mt-1">
+                            Relatif dari root vault (tanpa awalan <span class="font-mono">legal-vault/</span>).
+                            Contoh: <span class="font-mono">Kontrak Klien/ACME</span>.
+                            Kosongkan untuk memakai folder otomatis:
+                            <span class="font-mono text-[11px]">{{ project.suggested_legal_vault_path || 'Project Contracts/…' }}</span>
+                        </p>
+                        <input
+                            v-model="form.legal_vault_path"
+                            type="text"
+                            class="input input-bordered input-sm w-full font-mono"
+                            :placeholder="project.suggested_legal_vault_path || 'Project Contracts/nama-project'"
+                            autocomplete="off"
+                        />
+                        <p v-if="form.errors.legal_vault_path" class="text-error text-xs">{{ form.errors.legal_vault_path }}</p>
                     </div>
 
                     <div class="divider">Termin pembayaran</div>

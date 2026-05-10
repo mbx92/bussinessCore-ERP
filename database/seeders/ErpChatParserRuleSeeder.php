@@ -66,6 +66,24 @@ class ErpChatParserRuleSeeder extends Seeder
                 'is_active' => true,
                 'notes' => 'Fallback sederhana untuk menampilkan kemampuan chatbot.',
             ],
+            [
+                'name' => 'Kirim invoice ke email',
+                'intent_key' => 'send_invoice',
+                'keywords' => ['kirim invoice'],
+                'match_mode' => 'or',
+                'priority' => 55,
+                'is_active' => true,
+                'notes' => 'Mengirim invoice project via email dengan konfirmasi.',
+            ],
+            [
+                'name' => 'List invoice terkirim',
+                'intent_key' => 'invoice_sent_list',
+                'keywords' => ['list invoice', 'invoice dikirim', 'invoice terkirim'],
+                'match_mode' => 'or',
+                'priority' => 56,
+                'is_active' => true,
+                'notes' => 'Menampilkan riwayat invoice yang dikirim lewat chatbot.',
+            ],
         ];
 
         foreach ($rules as $rule) {

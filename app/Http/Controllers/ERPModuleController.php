@@ -73,8 +73,8 @@ class ERPModuleController extends Controller
     public function hr(): Response
     {
         return $this->renderModule('HR', [
-            ['title' => 'Pembayaran Anggota', 'description' => 'Referensi pembayaran anggota saat ini.', 'route' => 'reports.member-payments', 'icon' => 'user-circle'],
-            ['title' => 'Legal', 'description' => 'Template dan dokumen legal untuk kontrak/perjanjian kerja sama.', 'route' => 'erp.hr.legal', 'icon' => 'document-text'],
+            ['title' => 'Karyawan', 'description' => 'Data karyawan: nomor pegawai, kontak, jabatan, dan gaji pokok.', 'route' => 'erp.hr.employees', 'icon' => 'identification'],
+            ['title' => 'Legal', 'description' => 'File manager dokumen legal: folder, upload, dan pratinjau PDF.', 'route' => 'erp.hr.legal', 'icon' => 'document-text'],
         ]);
     }
 

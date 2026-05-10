@@ -10,6 +10,7 @@ class ErpChatParserRule extends Model
         'name',
         'intent_key',
         'keywords',
+        'match_mode',
         'priority',
         'is_active',
         'notes',

@@ -29,6 +29,7 @@ class Project extends Model
         'started_at',
         'finished_at',
         'description',
+        'legal_vault_path',
     ];
 
     protected $casts = [

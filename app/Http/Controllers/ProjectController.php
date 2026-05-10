@@ -12,8 +12,11 @@ use App\Models\ProjectTask;
 use App\Models\TeamRole;
 use App\Models\TeamDistribution;
 use App\Models\User;
+use App\Support\LegalVaultPath;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -101,6 +104,8 @@ class ProjectController extends Controller
         }
         $teamRoles = TeamRole::query()->where('is_active', true)->orderBy('name')->get();
 
+        $legalVaultRelativePath = $this->resolveLegalVaultPath($project);
+
         return Inertia::render('Projects/Show', [
             'project' => [
                 'id'            => $project->id,
@@ -185,6 +190,18 @@ class ProjectController extends Controller
                     'status' => $m->status,
                     'notes' => $m->notes,
                 ]),
+                'legal_documents' => [
+                    'vault_path' => $legalVaultRelativePath,
+                    'uses_custom_mapping' => $project->legal_vault_path !== null && trim((string) $project->legal_vault_path) !== '',
+                    'default_path_hint' => $this->defaultLegalVaultRelativePath($project),
+                ],
+                'invoice' => [
+                    'available' => $project->status === 'selesai',
+                    'number' => $project->invoice_number,
+                    'show_url' => $project->status === 'selesai'
+                        ? route('erp.sales.project-invoices.show', $project)
+                        : null,
+                ],
             ],
             'material_products' => MasterProduct::query()
                 ->where('status', 'active')
@@ -325,6 +342,8 @@ class ProjectController extends Controller
                 'started_at'     => $project->started_at?->format('Y-m-d') ?? '',
                 'finished_at'    => $project->finished_at?->format('Y-m-d') ?? '',
                 'description'    => $project->description ?? '',
+                'legal_vault_path' => $project->legal_vault_path ?? '',
+                'suggested_legal_vault_path' => $this->defaultLegalVaultRelativePath($project),
             ],
             'payments' => $project->payments->map(fn ($p) => [
                 'id'          => $p->id,
@@ -358,6 +377,7 @@ class ProjectController extends Controller
             'started_at'     => 'nullable|date',
             'finished_at'    => 'nullable|date|after_or_equal:started_at',
             'description'    => 'nullable|string',
+            'legal_vault_path' => 'nullable|string|max:2000',
         ];
 
         if ($canEditPayments) {
@@ -368,6 +388,19 @@ class ProjectController extends Controller
 
         $validated = $request->validate($rules);
         $validated['project_type'] = $validated['project_type'] ?? $project->project_type ?? 'system_website_development';
+
+        $legalRaw = $request->input('legal_vault_path');
+        if ($legalRaw === null || (is_string($legalRaw) && trim($legalRaw) === '')) {
+            $validated['legal_vault_path'] = null;
+        } else {
+            try {
+                $validated['legal_vault_path'] = LegalVaultPath::normalize(trim((string) $legalRaw));
+            } catch (\InvalidArgumentException $e) {
+                throw ValidationException::withMessages([
+                    'legal_vault_path' => $e->getMessage(),
+                ]);
+            }
+        }
 
         if ($canEditPayments) {
             $this->assertPaymentsTotalHundredPercent($validated['payments']);
@@ -565,5 +598,58 @@ class ProjectController extends Controller
     {
         $project->payments()->delete();
         $this->createPaymentRows($project, $payments);
+    }
+
+    private function resolveLegalVaultPath(Project $project): string
+    {
+        $custom = $project->legal_vault_path;
+        if (is_string($custom) && trim($custom) !== '') {
+            try {
+                $normalized = LegalVaultPath::normalize(trim($custom));
+            } catch (\InvalidArgumentException) {
+                return $this->ensureDefaultProjectLegalVaultFolder($project);
+            }
+            if ($normalized !== '') {
+                $this->mkdirLegalVaultPath($normalized);
+
+                return $normalized;
+            }
+        }
+
+        return $this->ensureDefaultProjectLegalVaultFolder($project);
+    }
+
+    /**
+     * Folder default: Project Contracts / {slug nama project}.
+     */
+    private function defaultLegalVaultRelativePath(Project $project): string
+    {
+        $slug = Str::slug($project->name);
+        if ($slug === '') {
+            $slug = 'project-'.strtolower(str_replace('-', '', substr((string) $project->getKey(), 0, 8)));
+        }
+
+        return 'Project Contracts/'.$slug;
+    }
+
+    private function ensureDefaultProjectLegalVaultFolder(Project $project): string
+    {
+        $relative = $this->defaultLegalVaultRelativePath($project);
+        $this->mkdirLegalVaultPath($relative);
+
+        return $relative;
+    }
+
+    private function mkdirLegalVaultPath(string $relative): void
+    {
+        $root = storage_path('app/legal-vault');
+        if (! File::isDirectory($root)) {
+            File::makeDirectory($root, 0755, true);
+        }
+
+        $target = $root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        if (! File::isDirectory($target)) {
+            File::makeDirectory($target, 0755, true);
+        }
     }
 }

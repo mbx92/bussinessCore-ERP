@@ -82,14 +82,14 @@ const submit = () => form.post(route('projects.store'));
     <AppLayout>
         <div class="max-w-3xl space-y-5">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-center justify-between gap-3 mb-1">
-                    <div class="flex items-center gap-3">
-                    <Link :href="route('projects.index')" class="btn btn-ghost btn-sm">← Kembali</Link>
-                    </div>
-                    <Link :href="route('erp.projects')" class="btn btn-ghost btn-sm">Back</Link>
-                </div>
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
-                <h1 class="mt-2 text-3xl font-bold tracking-tight">Tambah Project Baru</h1>
+                <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+                    <h1 class="text-3xl font-bold tracking-tight">Tambah Project Baru</h1>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <Link :href="route('projects.index')" class="btn btn-ghost btn-sm">Kembali</Link>
+                        <Link :href="route('erp.projects')" class="btn btn-ghost btn-sm">Back</Link>
+                    </div>
+                </div>
                 <p class="mt-2 text-sm text-base-content/70">Isi data awal project beserta skema termin pembayaran.</p>
             </div>
 

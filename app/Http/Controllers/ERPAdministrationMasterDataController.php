@@ -146,13 +146,14 @@ class ERPAdministrationMasterDataController extends Controller
     public function storeParserRule(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:120',
-            'intent_key' => 'required|string|max:60',
-            'keywords' => 'required|array|min:1',
-            'keywords.*' => 'required|string|max:60',
-            'priority' => 'required|integer|min:1|max:9999',
-            'is_active' => 'required|boolean',
-            'notes' => 'nullable|string|max:500',
+            'name'          => 'required|string|max:120',
+            'intent_key'    => 'required|string|max:60',
+            'keywords'      => 'required|array|min:1',
+            'keywords.*'    => 'required|string|max:60',
+            'match_mode'    => 'required|in:and,or',
+            'priority'      => 'required|integer|min:1|max:9999',
+            'is_active'     => 'required|boolean',
+            'notes'         => 'nullable|string|max:500',
             'response_text' => 'nullable|string|max:2000',
         ]);
 
@@ -171,13 +172,14 @@ class ERPAdministrationMasterDataController extends Controller
     public function updateParserRule(Request $request, ErpChatParserRule $parserRule): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:120',
-            'intent_key' => 'required|string|max:60',
-            'keywords' => 'required|array|min:1',
-            'keywords.*' => 'required|string|max:60',
-            'priority' => 'required|integer|min:1|max:9999',
-            'is_active' => 'required|boolean',
-            'notes' => 'nullable|string|max:500',
+            'name'          => 'required|string|max:120',
+            'intent_key'    => 'required|string|max:60',
+            'keywords'      => 'required|array|min:1',
+            'keywords.*'    => 'required|string|max:60',
+            'match_mode'    => 'required|in:and,or',
+            'priority'      => 'required|integer|min:1|max:9999',
+            'is_active'     => 'required|boolean',
+            'notes'         => 'nullable|string|max:500',
             'response_text' => 'nullable|string|max:2000',
         ]);
 
@@ -191,6 +193,13 @@ class ERPAdministrationMasterDataController extends Controller
         $parserRule->update($validated);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Parser rule berhasil diperbarui.']);
+    }
+
+    public function destroyParserRule(ErpChatParserRule $parserRule): RedirectResponse
+    {
+        $parserRule->delete();
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Parser rule berhasil dihapus.']);
     }
 
     public function documentSequences(): Response

@@ -303,21 +303,19 @@ const deleteProject = () => {
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <Link :href="route('projects.index')" class="btn btn-ghost btn-xs">← Projects</Link>
-                        </div>
                         <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
                         <h1 class="mt-2 text-3xl font-bold tracking-tight">{{ project.name }}</h1>
                         <p class="text-base-content/60">{{ project.client_name }}</p>
                         <p class="mt-1 text-sm text-base-content/70">Pantau progres project, keuangan, material, tim, dan task dalam satu halaman.</p>
                         <span class="badge badge-ghost badge-sm mt-1">{{ projectTypeLabel(project.project_type) }}</span>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap justify-end gap-2">
                         <StatusBadge :status="project.status" />
                         <button v-if="canMoveToBerjalan" class="btn btn-success btn-sm" @click="openStartStatusModal">Mulai Project</button>
                         <button v-if="canMoveToSelesai" class="btn btn-primary btn-sm" @click="openFinishStatusModal">Selesaikan Project</button>
                         <Link :href="route('projects.edit', project.id)" class="btn btn-outline btn-sm">Edit</Link>
                         <button class="btn btn-error btn-outline btn-sm" onclick="document.getElementById('modal-delete-project').showModal()">Hapus</button>
+                        <Link class="btn btn-ghost btn-sm" :href="route('projects.index')">Back</Link>
                     </div>
                 </div>
             </div>
@@ -374,6 +372,7 @@ const deleteProject = () => {
                 <button :class="['tab', activeTab === 'materials' ? 'tab-active' : '']" @click="activeTab = 'materials'">Material / BOM</button>
                 <button :class="['tab', activeTab === 'kas' ? 'tab-active' : '']" @click="activeTab = 'kas'">Kas Masuk / Keluar</button>
                 <button :class="['tab', activeTab === 'tim' ? 'tab-active' : '']" @click="activeTab = 'tim'">Tim & Referral</button>
+                <button :class="['tab', activeTab === 'docs' ? 'tab-active' : '']" @click="activeTab = 'docs'">Dokumen & Invoice</button>
                 <button v-if="canShowKanban" :class="['tab', activeTab === 'kanban' ? 'tab-active' : '']" @click="activeTab = 'kanban'">Kanban Task</button>
             </div>
 
@@ -555,6 +554,58 @@ const deleteProject = () => {
             </div>
 
             <!-- Tab: Tim -->
+            <div v-if="activeTab === 'docs'" class="space-y-4">
+                <div class="ocn-panel">
+                    <div class="ocn-panel__head">
+                        <h2 class="ocn-panel__title">Dokumen legal (kontrak)</h2>
+                        <p class="ocn-panel__desc">
+                            Folder khusus project di Legal Workspace. Unggah kontrak kerja, NDA, atau dokumen lain ke folder ini.
+                        </p>
+                    </div>
+                    <div class="card-body space-y-3">
+                        <p class="text-sm text-base-content/70 flex flex-wrap items-center gap-2">
+                            Path vault:
+                            <span class="font-mono text-xs bg-base-200 px-2 py-0.5 rounded">{{ project.legal_documents?.vault_path || '-' }}</span>
+                            <span v-if="project.legal_documents?.uses_custom_mapping" class="badge badge-info badge-sm">Map manual</span>
+                            <span v-else class="badge badge-ghost badge-sm">Default otomatis</span>
+                        </p>
+                        <p v-if="!project.legal_documents?.uses_custom_mapping && project.legal_documents?.default_path_hint" class="text-xs text-base-content/55">
+                            Default bila path kustom kosong: <span class="font-mono">{{ project.legal_documents.default_path_hint }}</span>
+                            — ubah di <Link :href="route('projects.edit', project.id)" class="link link-primary">Edit project</Link>.
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <Link
+                                v-if="project.legal_documents?.vault_path"
+                                :href="route('erp.hr.legal', { path: project.legal_documents.vault_path })"
+                                class="btn btn-primary btn-sm"
+                            >Buka folder di Legal</Link>
+                            <Link :href="route('erp.hr')" class="btn btn-outline btn-sm">Ke modul HR</Link>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ocn-panel">
+                    <div class="ocn-panel__head">
+                        <h2 class="ocn-panel__title">Invoice project</h2>
+                        <p class="ocn-panel__desc">Halaman invoice penagihan (setelah project selesai).</p>
+                    </div>
+                    <div class="card-body space-y-3">
+                        <template v-if="project.invoice?.available && project.invoice?.show_url">
+                            <p v-if="project.invoice.number" class="text-sm">
+                                Nomor invoice: <span class="font-semibold font-mono">{{ project.invoice.number }}</span>
+                            </p>
+                            <p v-else class="text-sm text-base-content/70">
+                                Nomor invoice akan muncul setelah invoice pertama kali di-generate / dibuka dari Sales.
+                            </p>
+                            <Link :href="project.invoice.show_url" class="btn btn-primary btn-sm">Buka halaman invoice</Link>
+                        </template>
+                        <p v-else class="text-sm text-base-content/70">
+                            Invoice belum tersedia. Ubah status project ke <strong>Selesai</strong> untuk mengaktifkan invoice project di menu Sales.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <div v-if="activeTab === 'tim'" class="space-y-4">
                 <div class="ocn-panel">
                     <div class="ocn-panel__head flex flex-wrap items-center justify-between gap-2">

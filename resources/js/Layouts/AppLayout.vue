@@ -5,6 +5,8 @@ import {
     HomeIcon, CodeBracketIcon, ArrowDownCircleIcon, ArrowUpCircleIcon, ChartBarIcon,
     UsersIcon, Bars3Icon, XMarkIcon, ArrowRightOnRectangleIcon, BuildingOffice2Icon, BellAlertIcon,
     ShoppingCartIcon, ArchiveBoxIcon, UserCircleIcon, BanknotesIcon, CircleStackIcon, ChatBubbleLeftRightIcon, PaperAirplaneIcon,
+    TrashIcon,
+    WalletIcon,
 } from '@heroicons/vue/24/outline';
 import FlashMessage from '@/Components/FlashMessage.vue';
 
@@ -20,12 +22,85 @@ const chatInput = ref('');
 const chatLoading = ref(false);
 const chatBodyRef = ref(null);
 const chatInputRef = ref(null);
-const chatMessages = ref([
-    {
-        role: 'assistant',
-        text: 'Halo! Saya siap bantu cek data ERP. Coba tanya: "stok lid cup", "harga standing pouch", atau "invoice belum dibayar".',
-    },
-]);
+
+const CHAT_STORAGE_KEY = 'erp_chat_history';
+const WELCOME_MSG = {
+    role: 'assistant',
+    text: 'Halo! Saya siap bantu cek data ERP.\nKetik **bantuan** untuk melihat semua contoh pertanyaan.',
+    ts: Date.now(),
+};
+
+const quickReplies = [
+    'bantuan',
+    'stok rendah',
+    'cashflow hari ini',
+    'invoice belum dibayar',
+    'list invoice yang dikirim',
+    'project aktif',
+    'pos hari ini',
+    'penjualan bulan ini',
+    'biaya operasional',
+];
+
+const loadHistory = () => {
+    try {
+        const saved = localStorage.getItem(CHAT_STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+    } catch { /* ignore */ }
+    return [{ ...WELCOME_MSG }];
+};
+
+const chatMessages = ref(loadHistory());
+
+const saveHistory = () => {
+    try {
+        // keep max 60 messages
+        const toSave = chatMessages.value.slice(-60);
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+    } catch { /* ignore */ }
+};
+
+const clearHistory = () => {
+    chatMessages.value = [{ ...WELCOME_MSG, ts: Date.now() }];
+    saveHistory();
+};
+
+const formatTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+};
+
+// Minimal markdown: **bold**, leading "- " bullet, \n → linebreak.
+const renderMarkdown = (text) => {
+    if (!text) return '';
+    let safe = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // **bold**
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+    // Lines starting with "- " → bullet
+    const lines = safe.split('\n');
+    let inList = false;
+    const out = [];
+    for (const line of lines) {
+        if (/^- /.test(line)) {
+            if (!inList) { out.push('<ul class="list-disc ml-4 space-y-0.5 mt-1">'); inList = true; }
+            out.push(`<li>${line.slice(2)}</li>`);
+        } else {
+            if (inList) { out.push('</ul>'); inList = false; }
+            out.push(line === '' ? '<br>' : `<span class="block">${line}</span>`);
+        }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('');
+};
 
 const sidebarModules = computed(() => {
     const role = auth.value?.user?.role;
@@ -43,6 +118,12 @@ const sidebarModules = computed(() => {
                     { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon },
                     { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon },
                     { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon },
+                ],
+            },
+            {
+                title: 'Personal',
+                items: [
+                    { name: 'Keuangan pribadi', href: route('personal'), icon: WalletIcon },
                 ],
             },
         );
@@ -71,6 +152,8 @@ const topbarContext = computed(() => {
     if (pathname.includes('/erp/accounting/reconciliation')) return { label: 'Rekonsiliasi Workspace', subtitle: 'Kontrol mutasi kas/bank harian dan mingguan.' };
     if (pathname.includes('/kas-masuk') || pathname.includes('/kas-keluar')) return { label: 'Accounting Workspace', subtitle: 'Kelola transaksi kas dan posting jurnal terintegrasi.' };
     if (pathname.includes('/projects')) return { label: 'Projects Workspace', subtitle: 'Pantau proyek, termin pembayaran, dan profitabilitas.' };
+    if (pathname.includes('/erp/hr/legal')) return { label: 'Legal Workspace', subtitle: 'File manager dokumen legal di server.' };
+    if (pathname.startsWith('/personal')) return { label: 'Personal Workspace', subtitle: 'Pencatatan keuangan pribadi dan keluarga.' };
 
     return { label: 'ERP Command Center', subtitle: 'Satu dashboard untuk finance, project, dan operasional.' };
 });
@@ -105,11 +188,11 @@ const getCookieValue = (name) => {
     return match ? decodeURIComponent(match[1]) : '';
 };
 
-const sendChatMessage = async () => {
-    const message = chatInput.value.trim();
+const sendChatMessage = async (overrideText = null) => {
+    const message = (overrideText ?? chatInput.value).trim();
     if (!message || chatLoading.value) return;
 
-    chatMessages.value.push({ role: 'user', text: message });
+    chatMessages.value.push({ role: 'user', text: message, ts: Date.now() });
     chatInput.value = '';
     await nextTick();
     scrollChatToBottom();
@@ -127,17 +210,20 @@ const sendChatMessage = async () => {
             body: JSON.stringify({ message }),
         });
 
-        const payload = await response.json();
-        const answer = payload?.answer || 'Maaf, terjadi kendala saat memproses pertanyaan.';
-        chatMessages.value.push({ role: 'assistant', text: answer });
-        await nextTick();
-        scrollChatToBottom();
-    } catch (error) {
-        chatMessages.value.push({ role: 'assistant', text: 'Koneksi ke chatbot gagal. Coba lagi sebentar.' });
-        await nextTick();
-        scrollChatToBottom();
+        if (!response.ok) {
+            const errPayload = await response.json().catch(() => ({}));
+            const errMsg = errPayload?.message || `Server error ${response.status}.`;
+            chatMessages.value.push({ role: 'assistant', text: `⚠️ ${errMsg}`, ts: Date.now() });
+        } else {
+            const payload = await response.json();
+            const answer = payload?.answer || 'Maaf, terjadi kendala saat memproses pertanyaan.';
+            chatMessages.value.push({ role: 'assistant', text: answer, ts: Date.now() });
+        }
+    } catch {
+        chatMessages.value.push({ role: 'assistant', text: '⚠️ Koneksi ke chatbot gagal. Coba lagi sebentar.', ts: Date.now() });
     } finally {
         chatLoading.value = false;
+        saveHistory();
         await nextTick();
         scrollChatToBottom();
     }
@@ -260,54 +346,91 @@ const sendChatMessage = async () => {
             <div class="fixed bottom-6 right-6 z-[9999] flex flex-col items-end gap-3">
                 <div
                     v-if="chatPanelOpen"
-                    class="w-[40rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-2xl"
+                    class="w-[42rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-2xl"
                 >
+                    <!-- Chat header -->
                     <div class="flex items-center justify-between border-b border-base-300 px-4 py-3">
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.14em] text-primary/70">AI Assistant</p>
-                            <p class="text-sm font-semibold">ERP Chat Assistant</p>
+                            <p class="text-xs font-bold uppercase tracking-[0.14em] text-primary/70">Assistant</p>
+                            <p class="text-sm font-semibold">Assistant</p>
                         </div>
-                        <button class="btn btn-ghost btn-xs" @click="chatPanelOpen = false">
-                            <XMarkIcon class="h-4 w-4" />
-                        </button>
+                        <div class="flex items-center gap-1">
+                            <button class="btn btn-ghost btn-xs text-base-content/50 hover:text-error" title="Hapus riwayat chat" @click="clearHistory">
+                                <TrashIcon class="h-4 w-4" />
+                            </button>
+                            <button class="btn btn-ghost btn-xs" @click="chatPanelOpen = false">
+                                <XMarkIcon class="h-4 w-4" />
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex h-[32rem] flex-col">
+
+                    <div class="flex h-[34rem] flex-col">
+                        <!-- Message list -->
                         <div ref="chatBodyRef" class="flex-1 space-y-3 overflow-y-auto p-4">
                             <div
                                 v-for="(msg, idx) in chatMessages"
                                 :key="idx"
-                                class="rounded-xl p-3 text-sm"
-                                :class="msg.role === 'user'
-                                    ? 'ml-12 bg-primary text-primary-content'
-                                    : 'mr-12 bg-base-200 text-base-content/80'"
+                                :class="msg.role === 'user' ? 'flex justify-end' : 'flex justify-start'"
                             >
-                                <p class="whitespace-pre-line">{{ msg.text }}</p>
+                                <div
+                                    class="max-w-[85%] rounded-xl px-3 py-2.5 text-sm"
+                                    :class="msg.role === 'user'
+                                        ? 'bg-primary text-primary-content'
+                                        : 'bg-base-200 text-base-content/90'"
+                                >
+                                    <!-- eslint-disable-next-line vue/no-v-html -->
+                                    <div v-if="msg.role === 'assistant'" class="leading-relaxed" v-html="renderMarkdown(msg.text)" />
+                                    <p v-else class="leading-relaxed">{{ msg.text }}</p>
+                                    <p
+                                        class="mt-1 text-[10px]"
+                                        :class="msg.role === 'user' ? 'text-primary-content/60 text-right' : 'text-base-content/40'"
+                                    >{{ formatTime(msg.ts) }}</p>
+                                </div>
                             </div>
-                            <div v-if="chatLoading" class="mr-12 rounded-xl bg-base-200 p-3 text-sm text-base-content/70">
-                                Mengetik jawaban...
+
+                            <!-- Typing indicator -->
+                            <div v-if="chatLoading" class="flex justify-start">
+                                <div class="flex items-center gap-1 rounded-xl bg-base-200 px-4 py-3">
+                                    <span class="inline-block h-2 w-2 rounded-full bg-base-content/40 animate-bounce [animation-delay:0ms]" />
+                                    <span class="inline-block h-2 w-2 rounded-full bg-base-content/40 animate-bounce [animation-delay:150ms]" />
+                                    <span class="inline-block h-2 w-2 rounded-full bg-base-content/40 animate-bounce [animation-delay:300ms]" />
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Quick reply chips -->
+                        <div class="flex flex-wrap gap-1.5 border-t border-base-300 px-3 py-2">
+                            <button
+                                v-for="chip in quickReplies"
+                                :key="chip"
+                                class="badge badge-outline badge-sm cursor-pointer hover:badge-primary transition-colors"
+                                :disabled="chatLoading"
+                                @click="sendChatMessage(chip)"
+                            >{{ chip }}</button>
+                        </div>
+
+                        <!-- Input bar -->
                         <div class="border-t border-base-300 p-3">
-                          <div class="flex items-center gap-2">
-                            <input
-                                ref="chatInputRef"
-                                v-model="chatInput"
-                                type="text"
-                                class="input input-bordered input-sm w-full"
-                                placeholder="Tulis pertanyaan..."
-                                @keyup.enter="sendChatMessage"
-                            />
-                            <button class="btn btn-primary btn-sm" :disabled="chatLoading || !chatInput.trim()" @click="sendChatMessage">
-                                <PaperAirplaneIcon class="h-4 w-4" />
-                            </button>
-                          </div>
+                            <div class="flex items-center gap-2">
+                                <input
+                                    ref="chatInputRef"
+                                    v-model="chatInput"
+                                    type="text"
+                                    class="input input-bordered input-sm w-full"
+                                    placeholder="Tulis pertanyaan..."
+                                    @keyup.enter="sendChatMessage()"
+                                />
+                                <button class="btn btn-primary btn-sm" :disabled="chatLoading || !chatInput.trim()" @click="sendChatMessage()">
+                                    <PaperAirplaneIcon class="h-4 w-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <button class="btn btn-primary rounded-full px-4 shadow-xl" @click="toggleChatPanel">
                     <ChatBubbleLeftRightIcon class="h-5 w-5" />
-                    <span>{{ chatPanelOpen ? 'Tutup Chat' : 'AI Chat' }}</span>
+                    <span>{{ chatPanelOpen ? 'Tutup Chat' : 'Assistant' }}</span>
                 </button>
             </div>
         </div>

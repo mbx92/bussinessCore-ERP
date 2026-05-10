@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
 {
+    protected $table = 'employees';
+
     protected $fillable = [
         'employee_no',
         'name',
@@ -22,5 +24,10 @@ class Employee extends Model
             'base_salary' => 'decimal:2',
             'is_active' => 'bool',
         ];
+    }
+
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
     }
 }

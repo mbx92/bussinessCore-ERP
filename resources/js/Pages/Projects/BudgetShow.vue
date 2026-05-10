@@ -105,21 +105,21 @@ const downloadPdf = () => window.open(route('erp.projects.budgets.pdf', props.bu
     <AppLayout>
         <div class="space-y-5">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-center justify-between gap-3">
+                <div class="flex items-start justify-between gap-3">
                     <div>
-                        <Link :href="route('erp.projects.budgets.index')" class="btn btn-ghost btn-xs">← Budgeting Project</Link>
-                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70 mt-1">Projects Workspace</p>
+                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
                         <h1 class="text-3xl font-bold tracking-tight mt-2">{{ budget.name }}</h1>
                         <p class="text-base-content/60">{{ budget.client_name }}</p>
                         <p class="mt-1 text-sm text-base-content/70">Tinjau detail budget, lakukan revisi, lalu lanjutkan proses deal atau convert.</p>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap justify-end gap-2">
                         <span class="badge badge-ghost">{{ budget.status }}</span>
                         <button class="btn btn-outline btn-sm" @click="downloadPdf">PDF</button>
                         <button v-if="budget.status === 'draft'" class="btn btn-outline btn-sm" @click="markDeal">Tandai Deal</button>
                         <button v-if="budget.status === 'deal'" class="btn btn-primary btn-sm" @click="convert">Convert ke Project</button>
                         <Link v-if="budget.converted_project_id" :href="route('projects.show', budget.converted_project_id)" class="btn btn-ghost btn-sm">Lihat Project</Link>
                         <button v-if="budget.status !== 'converted'" class="btn btn-primary btn-sm" @click="openEditModal">Edit</button>
+                        <Link class="btn btn-ghost btn-sm" :href="route('erp.projects.budgets.index')">Back</Link>
                     </div>
                 </div>
             </div>

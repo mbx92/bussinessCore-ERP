@@ -1,33 +1,34 @@
 <?php
 
-use App\Http\Controllers\CashInController;
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\CashInController;
 use App\Http\Controllers\CashOutController;
-use App\Http\Controllers\OperationalController;
-use App\Http\Controllers\ExpenseCategoryController;
-use App\Http\Controllers\ReconciliationController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PublicHomeController;
+use App\Http\Controllers\ERPAdministrationMasterDataController;
+use App\Http\Controllers\ErpChatbotController;
 use App\Http\Controllers\ERPInventoryController;
 use App\Http\Controllers\ERPInventoryMasterDataController;
-use App\Http\Controllers\ERPAdministrationMasterDataController;
 use App\Http\Controllers\ERPMasterProductController;
 use App\Http\Controllers\ERPModuleController;
 use App\Http\Controllers\ERPPurchasingController;
 use App\Http\Controllers\ERPReportingController;
 use App\Http\Controllers\ERPSalesController;
+use App\Http\Controllers\ErpSystemLogController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\HREmployeeController;
 use App\Http\Controllers\HRLegalController;
+use App\Http\Controllers\OperationalController;
+use App\Http\Controllers\PersonalModuleController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectBudgetController;
-use App\Http\Controllers\ProjectRoleController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectPaymentController;
+use App\Http\Controllers\ProjectRoleController;
+use App\Http\Controllers\PublicHomeController;
+use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TeamDistributionController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\ErpSystemLogController;
-use App\Http\Controllers\ErpChatbotController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicHomeController::class, 'index'])->name('dashboard');
@@ -63,14 +64,17 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/inventory', [ERPModuleController::class, 'inventory'])->name('erp.inventory');
         Route::get('erp/projects', [ERPModuleController::class, 'projects'])->name('erp.projects');
         Route::get('erp/hr', [ERPModuleController::class, 'hr'])->name('erp.hr');
+        Route::get('erp/hr/employees', [HREmployeeController::class, 'index'])->name('erp.hr.employees');
+        Route::post('erp/hr/employees', [HREmployeeController::class, 'store'])->name('erp.hr.employees.store');
+        Route::patch('erp/hr/employees/{employee}', [HREmployeeController::class, 'update'])->name('erp.hr.employees.update');
+        Route::delete('erp/hr/employees/{employee}', [HREmployeeController::class, 'destroy'])->name('erp.hr.employees.destroy');
         Route::get('erp/hr/legal', [HRLegalController::class, 'index'])->name('erp.hr.legal');
-        Route::get('erp/hr/legal/create', [HRLegalController::class, 'create'])->name('erp.hr.legal.create');
-        Route::post('erp/hr/legal', [HRLegalController::class, 'store'])->name('erp.hr.legal.store');
         Route::get('erp/hr/legal/templates/{file}', [HRLegalController::class, 'downloadTemplate'])->name('erp.hr.legal.templates.download');
-        Route::get('erp/hr/legal/{legalContract}/edit', [HRLegalController::class, 'edit'])->name('erp.hr.legal.edit');
-        Route::put('erp/hr/legal/{legalContract}', [HRLegalController::class, 'update'])->name('erp.hr.legal.update');
-        Route::delete('erp/hr/legal/{legalContract}', [HRLegalController::class, 'destroy'])->name('erp.hr.legal.destroy');
-        Route::get('erp/hr/legal/{legalContract}/pdf', [HRLegalController::class, 'pdf'])->name('erp.hr.legal.pdf');
+        Route::post('erp/hr/legal/folders', [HRLegalController::class, 'storeFolder'])->name('erp.hr.legal.folders.store');
+        Route::post('erp/hr/legal/uploads', [HRLegalController::class, 'upload'])->name('erp.hr.legal.uploads.store');
+        Route::delete('erp/hr/legal/items', [HRLegalController::class, 'destroyItem'])->name('erp.hr.legal.items.destroy');
+        Route::get('erp/hr/legal/files/download', [HRLegalController::class, 'downloadFile'])->name('erp.hr.legal.files.download');
+        Route::get('erp/hr/legal/files/view', [HRLegalController::class, 'viewFile'])->name('erp.hr.legal.files.view');
         Route::get('erp/reporting', [ERPModuleController::class, 'reporting'])->name('erp.reporting');
         Route::get('erp/master-products', [ERPMasterProductController::class, 'index'])->name('erp.master-products.index');
         Route::post('erp/master-products', [ERPMasterProductController::class, 'store'])->name('erp.master-products.store');
@@ -180,6 +184,12 @@ Route::middleware('auth')->group(function () {
         Route::get('export/project-profit', [ReportController::class, 'exportProjectProfitExcel'])->name('export.project-profit');
         Route::get('export/bulanan', [ReportController::class, 'exportMonthlyExcel'])->name('export.monthly');
         Route::get('export/anggota', [ReportController::class, 'exportMemberPaymentsExcel'])->name('export.member-payments');
+
+        // Personal — keuangan pribadi & keluarga (terpisah dari ERP bisnis)
+        Route::get('personal', [PersonalModuleController::class, 'index'])->name('personal');
+        Route::get('personal/overview', [PersonalModuleController::class, 'overview'])->name('personal.overview');
+        Route::get('personal/transactions', [PersonalModuleController::class, 'transactions'])->name('personal.transactions');
+        Route::get('personal/budgets', [PersonalModuleController::class, 'budgets'])->name('personal.budgets');
     });
 
     // User Management (Admin only)
@@ -203,6 +213,7 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/admin/parser-rules', [ERPAdministrationMasterDataController::class, 'parserRules'])->name('erp.admin.parser-rules');
         Route::post('erp/admin/parser-rules', [ERPAdministrationMasterDataController::class, 'storeParserRule'])->name('erp.admin.parser-rules.store');
         Route::patch('erp/admin/parser-rules/{parserRule}', [ERPAdministrationMasterDataController::class, 'updateParserRule'])->name('erp.admin.parser-rules.update');
+        Route::delete('erp/admin/parser-rules/{parserRule}', [ERPAdministrationMasterDataController::class, 'destroyParserRule'])->name('erp.admin.parser-rules.destroy');
         Route::get('erp/admin/system-logs', [ErpSystemLogController::class, 'index'])->name('erp.admin.system-logs.index');
     });
 });
