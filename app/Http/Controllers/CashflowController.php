@@ -210,7 +210,7 @@ class CashflowController extends Controller
         $posCashAccount = app(CoaSettingService::class)->resolveAccountByKey('pos_sale_cash_account', '1001');
         $posSales = $this->buildPosEntries($request, $posCashAccount);
 
-        $merged = $cashIns->merge($cashOuts)
+        $merged = collect($cashIns)->merge($cashOuts)
             ->merge($posSales)
             ->sortByDesc(fn (array $row) => sprintf('%s-%d', $row['date'] ?? '0000-00-00', $row['created_at']));
 

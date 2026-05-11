@@ -2,8 +2,9 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { BoltIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps({
   products: Array,
@@ -36,6 +37,12 @@ const form = useForm({
   lead_time_days: 7,
 });
 
+const autoSku = ref(true);
+const autoBarcode = ref(true);
+const previewSku = ref('');
+const previewBarcode = ref('');
+const loadingPreview = ref(false);
+
 const sellingPriceInput = reactive({
   value: '',
 });
@@ -61,6 +68,43 @@ const channelLabel = (value) => {
 
 const typeLabel = (value) => (value === 'project_material' ? 'Material Project' : 'Barang Jual');
 
+const fetchPreviewCodes = async () => {
+  loadingPreview.value = true;
+  try {
+    const res = await fetch(route('erp.master-products.preview-codes') + '?category=' + encodeURIComponent(form.category), {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      previewSku.value = data.sku || '';
+      previewBarcode.value = data.barcode || '';
+      if (autoSku.value) form.sku = previewSku.value;
+      if (autoBarcode.value) form.barcode = previewBarcode.value;
+    }
+  } catch { /* ignore */ } finally {
+    loadingPreview.value = false;
+  }
+};
+
+watch(() => form.category, (cat) => {
+  if (cat && (autoSku.value || autoBarcode.value)) fetchPreviewCodes();
+});
+
+const toggleAutoSku = () => {
+  autoSku.value = !autoSku.value;
+  if (autoSku.value && previewSku.value) form.sku = previewSku.value;
+  else if (autoSku.value && form.category) fetchPreviewCodes();
+  if (!autoSku.value) form.sku = '';
+};
+
+const toggleAutoBarcode = () => {
+  autoBarcode.value = !autoBarcode.value;
+  if (autoBarcode.value && previewBarcode.value) form.barcode = previewBarcode.value;
+  else if (autoBarcode.value) fetchPreviewCodes();
+  if (!autoBarcode.value) form.barcode = '';
+};
+
 const submitAddProduct = () => {
   form.selling_price = parse(sellingPriceInput.value);
   form.post(route('erp.master-products.store'), {
@@ -68,6 +112,10 @@ const submitAddProduct = () => {
     onSuccess: () => {
       form.reset();
       sellingPriceInput.value = '';
+      autoSku.value = true;
+      autoBarcode.value = true;
+      previewSku.value = '';
+      previewBarcode.value = '';
       document.getElementById('modal-add-product').close();
     },
   });
@@ -181,12 +229,52 @@ const goToDetail = (id) => {
         <h3 class="font-bold text-lg">Add Product</h3>
         <div class="mt-4 grid gap-3 md:grid-cols-2">
           <div>
-            <label class="label"><span class="label-text">SKU <span class="text-error">*</span></span></label>
-            <input v-model="form.sku" type="text" class="input input-bordered w-full" />
+            <label class="label"><span class="label-text">SKU</span></label>
+            <div class="flex items-center gap-1.5">
+              <input
+                v-model="form.sku"
+                type="text"
+                class="input input-bordered w-full font-mono"
+                :class="autoSku ? 'bg-base-200 text-base-content/60' : ''"
+                :readonly="autoSku"
+                :placeholder="autoSku ? 'Otomatis dari kategori' : 'Masukkan SKU manual'"
+              />
+              <button
+                type="button"
+                class="btn btn-square btn-sm shrink-0"
+                :class="autoSku ? 'btn-primary' : 'btn-ghost border border-base-300'"
+                title="Toggle SKU otomatis"
+                @click="toggleAutoSku"
+              >
+                <BoltIcon class="h-4 w-4" />
+              </button>
+            </div>
+            <p v-if="autoSku" class="mt-1 text-xs text-primary/70">SKU otomatis berdasarkan kategori</p>
+            <p v-if="form.errors.sku" class="mt-1 text-xs text-error">{{ form.errors.sku }}</p>
           </div>
           <div>
             <label class="label"><span class="label-text">Barcode</span></label>
-            <input v-model="form.barcode" type="text" class="input input-bordered w-full" placeholder="Opsional tapi disarankan untuk POS scan" />
+            <div class="flex items-center gap-1.5">
+              <input
+                v-model="form.barcode"
+                type="text"
+                class="input input-bordered w-full font-mono"
+                :class="autoBarcode ? 'bg-base-200 text-base-content/60' : ''"
+                :readonly="autoBarcode"
+                :placeholder="autoBarcode ? 'Otomatis EAN-13' : 'Masukkan barcode manual'"
+              />
+              <button
+                type="button"
+                class="btn btn-square btn-sm shrink-0"
+                :class="autoBarcode ? 'btn-primary' : 'btn-ghost border border-base-300'"
+                title="Toggle barcode otomatis"
+                @click="toggleAutoBarcode"
+              >
+                <BoltIcon class="h-4 w-4" />
+              </button>
+            </div>
+            <p v-if="autoBarcode" class="mt-1 text-xs text-primary/70">Barcode EAN-13 otomatis</p>
+            <p v-if="form.errors.barcode" class="mt-1 text-xs text-error">{{ form.errors.barcode }}</p>
           </div>
           <div>
             <label class="label"><span class="label-text">Nama Produk <span class="text-error">*</span></span></label>

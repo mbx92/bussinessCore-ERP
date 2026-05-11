@@ -5,6 +5,7 @@ import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { BoltIcon } from '@heroicons/vue/20/solid';
 
 const props = defineProps({
   product: Object,
@@ -190,6 +191,41 @@ const submitPrintBarcode = () => {
 
 const setBarcodeCopies = (n) => {
   printBarcodeForm.copies = Math.min(999, Math.max(1, Number(n) || 1));
+};
+
+const generatingEditCodes = ref(false);
+
+const regenerateEditSku = async () => {
+  generatingEditCodes.value = true;
+  try {
+    const cat = productForm.category || props.product.category;
+    const res = await fetch(route('erp.master-products.preview-codes') + '?category=' + encodeURIComponent(cat), {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.sku) productForm.sku = data.sku;
+    }
+  } catch { /* ignore */ } finally {
+    generatingEditCodes.value = false;
+  }
+};
+
+const regenerateEditBarcode = async () => {
+  generatingEditCodes.value = true;
+  try {
+    const res = await fetch(route('erp.master-products.preview-codes') + '?category=', {
+      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.barcode) productForm.barcode = data.barcode;
+    }
+  } catch { /* ignore */ } finally {
+    generatingEditCodes.value = false;
+  }
 };
 </script>
 
@@ -576,12 +612,34 @@ const setBarcodeCopies = (n) => {
           <div class="mt-4 grid gap-3 md:grid-cols-2">
             <div>
               <label class="label"><span class="label-text">SKU</span></label>
-              <input v-model="productForm.sku" type="text" class="input input-bordered w-full" />
+              <div class="flex items-center gap-1.5">
+                <input v-model="productForm.sku" type="text" class="input input-bordered w-full font-mono" />
+                <button
+                  type="button"
+                  class="btn btn-square btn-sm btn-ghost border border-base-300 shrink-0"
+                  title="Generate SKU baru dari kategori"
+                  :disabled="generatingEditCodes"
+                  @click="regenerateEditSku"
+                >
+                  <BoltIcon class="h-4 w-4" />
+                </button>
+              </div>
               <p v-if="productForm.errors.sku" class="text-xs text-error mt-1">{{ productForm.errors.sku }}</p>
             </div>
             <div>
               <label class="label"><span class="label-text">Barcode</span></label>
-              <input v-model="productForm.barcode" type="text" class="input input-bordered w-full" />
+              <div class="flex items-center gap-1.5">
+                <input v-model="productForm.barcode" type="text" class="input input-bordered w-full font-mono" />
+                <button
+                  type="button"
+                  class="btn btn-square btn-sm btn-ghost border border-base-300 shrink-0"
+                  title="Generate barcode EAN-13 baru"
+                  :disabled="generatingEditCodes"
+                  @click="regenerateEditBarcode"
+                >
+                  <BoltIcon class="h-4 w-4" />
+                </button>
+              </div>
               <p v-if="productForm.errors.barcode" class="text-xs text-error mt-1">{{ productForm.errors.barcode }}</p>
             </div>
             <div>

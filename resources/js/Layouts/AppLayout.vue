@@ -11,6 +11,7 @@ import {
     PhotoIcon,
     GlobeAltIcon,
     ShareIcon,
+    CalendarDaysIcon,
 } from '@heroicons/vue/24/outline';
 import FlashMessage from '@/Components/FlashMessage.vue';
 
@@ -121,6 +122,7 @@ const sidebarModules = computed(() => {
                 { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon },
                 { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon },
                 { name: 'CRM', href: route('erp.crm'), icon: ShareIcon },
+                { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon },
                 { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon },
             ],
         });
@@ -170,6 +172,7 @@ const topbarContext = computed(() => {
     if (pathname.includes('/kas-masuk') || pathname.includes('/kas-keluar')) return { label: 'Accounting Workspace', subtitle: 'Kelola transaksi kas dan posting jurnal terintegrasi.' };
     if (pathname.includes('/projects')) return { label: 'Projects Workspace', subtitle: 'Pantau proyek, termin pembayaran, dan profitabilitas.' };
     if (pathname.includes('/erp/hr/legal')) return { label: 'Legal Workspace', subtitle: 'File manager dokumen legal di server.' };
+    if (pathname.includes('/erp/calendar')) return { label: 'Calendar Workspace', subtitle: 'Jadwal event project, PO, pipeline, dan follow-up.' };
     if (pathname.includes('/erp/crm')) return { label: 'CRM Workspace', subtitle: 'Kelola prospek, customer, dan aktivitas follow-up.' };
     if (pathname.startsWith('/personal')) return { label: 'Personal Workspace', subtitle: 'Pencatatan keuangan pribadi dan keluarga.' };
     if (pathname.startsWith('/erp/cms')) return { label: 'Website CMS', subtitle: 'Konten landing publik, media, dan publikasi halaman.' };
@@ -232,7 +235,13 @@ const sendChatMessage = async (overrideText = null) => {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-XSRF-TOKEN': getCookieValue('XSRF-TOKEN'),
             },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({
+                message,
+                history: chatMessages.value
+                    .filter(m => m.role === 'user' || m.role === 'assistant')
+                    .slice(-10)
+                    .map(m => ({ role: m.role, text: m.text })),
+            }),
         });
 
         if (!response.ok) {

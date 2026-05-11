@@ -45,7 +45,7 @@ class ERPMasterProductController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'sku' => 'required|string|max:64|unique:master_products,sku',
+            'sku' => 'nullable|string|max:64|unique:master_products,sku',
             'barcode' => 'nullable|string|max:100|unique:master_products,barcode',
             'name' => 'required|string|max:255',
             'category' => 'required|string|max:100|exists:product_categories,name',
@@ -61,9 +61,27 @@ class ERPMasterProductController extends Controller
 
         $validated['lead_time_days'] = $validated['lead_time_days'] ?? 7;
 
+        if (empty($validated['sku'])) {
+            $validated['sku'] = MasterProduct::generateSku($validated['category']);
+        }
+
+        if (empty($validated['barcode'])) {
+            $validated['barcode'] = MasterProduct::generateBarcode();
+        }
+
         MasterProduct::query()->create($validated);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Produk berhasil ditambahkan.']);
+    }
+
+    public function previewCodes(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $category = $request->string('category')->toString();
+
+        return response()->json([
+            'sku' => $category ? MasterProduct::generateSku($category) : null,
+            'barcode' => MasterProduct::generateBarcode(),
+        ]);
     }
 
     public function show(MasterProduct $masterProduct, WindowsSmbRawPrinter $smb): Response

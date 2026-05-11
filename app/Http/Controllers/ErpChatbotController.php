@@ -26,13 +26,17 @@ class ErpChatbotController extends Controller
     {
         $validated = $request->validate([
             'message' => 'required|string|max:1000',
+            'history' => 'nullable|array|max:10',
+            'history.*.role' => 'required_with:history|string|in:user,assistant',
+            'history.*.text' => 'required_with:history|string|max:2000',
         ]);
 
         $message = trim($validated['message']);
+        $history = $validated['history'] ?? [];
         $parsed = $parser->parse($message);
 
         if (! $parsed['matched']) {
-            $followUp = $this->tryFollowUp($message);
+            $followUp = $this->tryFollowUp($message, $history);
             if ($followUp !== null) {
                 return response()->json(['ok' => true, 'intent' => 'follow_up', 'answer' => $followUp]);
             }
@@ -46,6 +50,8 @@ class ErpChatbotController extends Controller
 
         $intent = $parsed['rule']['intent_key'] ?? null;
         $customResponse = trim((string) ($parsed['rule']['response_text'] ?? ''));
+
+        $this->rememberIntent($intent);
 
         if ($customResponse !== '') {
             return response()->json([
@@ -96,24 +102,69 @@ class ErpChatbotController extends Controller
         return 'chatbot_ctx_'.Auth::id();
     }
 
-    private function rememberProduct(MasterProduct $product): void
+    private function getContext(): array
     {
-        Cache::put($this->contextKey(), [
-            'product_id' => $product->id,
-            'product_name' => $product->name,
-        ], now()->addMinutes(10));
+        return Cache::get($this->contextKey(), []);
     }
 
-    private function tryFollowUp(string $message): ?string
+    private function rememberProduct(MasterProduct $product): void
+    {
+        $ctx = $this->getContext();
+        $ctx['product_id'] = $product->id;
+        $ctx['product_name'] = $product->name;
+        $ctx['entity_type'] = 'product';
+        Cache::put($this->contextKey(), $ctx, now()->addMinutes(15));
+    }
+
+    private function rememberIntent(string $intent): void
+    {
+        $ctx = $this->getContext();
+        $ctx['last_intent'] = $intent;
+        Cache::put($this->contextKey(), $ctx, now()->addMinutes(15));
+    }
+
+    private function rememberProject(Project $project): void
+    {
+        $ctx = $this->getContext();
+        $ctx['project_id'] = $project->id;
+        $ctx['project_name'] = $project->name;
+        $ctx['entity_type'] = 'project';
+        Cache::put($this->contextKey(), $ctx, now()->addMinutes(15));
+    }
+
+    /**
+     * Resolve a follow-up message using cached context and chat history.
+     */
+    private function tryFollowUp(string $message, array $history = []): ?string
     {
         $lower = Str::of($message)->lower()->squish()->toString();
 
-        $stockTriggers = ['stoknya', 'stocknya', 'sisa stok', 'stok nya', 'berapa stok', 'cek stok'];
-        $priceTriggers = ['harganya', 'brapa harga', 'berapa harga', 'harga nya', 'brp harga', 'pricenya'];
-        $detailTriggers = ['detailnya', 'infonya', 'detail nya', 'info nya', 'lengkapnya'];
+        $stockTriggers = [
+            'stoknya', 'stocknya', 'sisa stok', 'stok nya', 'berapa stok', 'cek stok',
+            'stok', 'stock', 'sisa', 'ada berapa', 'tersedia', 'masih ada',
+        ];
+        $priceTriggers = [
+            'harganya', 'brapa harga', 'berapa harga', 'harga nya', 'brp harga', 'pricenya',
+            'harga', 'price', 'berapa', 'brp', 'brapa', 'costnya', 'cost',
+        ];
+        $detailTriggers = [
+            'detailnya', 'infonya', 'detail nya', 'info nya', 'lengkapnya',
+            'detail', 'info', 'lengkap', 'selengkapnya', 'lebih detail',
+        ];
 
-        $ctx = Cache::get($this->contextKey());
-        if (! $ctx || ! ($ctx['product_id'] ?? null)) {
+        $ctx = $this->getContext();
+
+        $result = $this->tryFollowUpFromProduct($lower, $ctx, $stockTriggers, $priceTriggers, $detailTriggers);
+        if ($result !== null) {
+            return $result;
+        }
+
+        return $this->tryFollowUpFromHistory($lower, $history, $stockTriggers, $priceTriggers, $detailTriggers);
+    }
+
+    private function tryFollowUpFromProduct(string $lower, array $ctx, array $stockTriggers, array $priceTriggers, array $detailTriggers): ?string
+    {
+        if (! ($ctx['product_id'] ?? null)) {
             return null;
         }
 
@@ -144,6 +195,72 @@ class ErpChatbotController extends Controller
             $this->rememberProduct($product);
 
             return $this->formatProductDetail($product);
+        }
+
+        return null;
+    }
+
+    /**
+     * Try to find a product mentioned in chat history when context cache is empty.
+     */
+    private function tryFollowUpFromHistory(string $lower, array $history, array $stockTriggers, array $priceTriggers, array $detailTriggers): ?string
+    {
+        if (empty($history)) {
+            return null;
+        }
+
+        $isStock = collect($stockTriggers)->some(fn ($t) => Str::contains($lower, $t));
+        $isPrice = collect($priceTriggers)->some(fn ($t) => Str::contains($lower, $t));
+        $isDetail = collect($detailTriggers)->some(fn ($t) => Str::contains($lower, $t));
+
+        if (! $isStock && ! $isPrice && ! $isDetail) {
+            return null;
+        }
+
+        $product = $this->findProductFromHistory($history);
+        if (! $product) {
+            return null;
+        }
+
+        $this->rememberProduct($product);
+
+        if ($isStock) {
+            $status = $product->stock <= ($product->min_stock ?? 0) ? ' ⚠️ *stok rendah*' : '';
+
+            return "**{$product->name}**\nStok: {$product->stock} {$product->uom}{$status}";
+        }
+
+        if ($isPrice) {
+            $price = number_format((float) $product->selling_price, 0, ',', '.');
+
+            return "**{$product->name}**\nHarga: Rp {$price} / {$product->uom}";
+        }
+
+        return $this->formatProductDetail($product);
+    }
+
+    /**
+     * Scan recent chat history for product names mentioned by the assistant (in bold **Name**).
+     */
+    private function findProductFromHistory(array $history): ?MasterProduct
+    {
+        $assistantMessages = collect($history)
+            ->where('role', 'assistant')
+            ->pluck('text')
+            ->reverse()
+            ->values();
+
+        foreach ($assistantMessages as $text) {
+            if (preg_match('/\*\*(.+?)\*\*/', (string) $text, $m)) {
+                $candidateName = trim($m[1]);
+                $product = MasterProduct::query()
+                    ->where('status', 'active')
+                    ->whereRaw('LOWER(name) = ?', [Str::lower($candidateName)])
+                    ->first();
+                if ($product) {
+                    return $product;
+                }
+            }
         }
 
         return null;

@@ -81,7 +81,12 @@ class ERPModuleController extends Controller
 
     public function crm(): Response
     {
-        return Inertia::render('ERP/CRM/Index');
+        return $this->renderModule('CRM', [
+            ['title' => 'Lead Management', 'description' => 'Pusat data calon customer, sumber lead, status prospek, dan PIC follow-up.', 'route' => 'erp.crm.leads', 'icon' => 'user-circle'],
+            ['title' => 'Customer Database', 'description' => 'Master customer lintas sub usaha agar histori komunikasi dan transaksi tetap terhubung.', 'route' => 'erp.crm.customers', 'icon' => 'identification'],
+            ['title' => 'Pipeline Penjualan', 'description' => 'Tahapan penawaran, deal value, dan peluang closing yang bisa dipantau tim.', 'route' => 'erp.crm.pipelines', 'icon' => 'clipboard-list'],
+            ['title' => 'Aktivitas Follow-up', 'description' => 'Log call, chat, meeting, reminder, dan next action untuk setiap prospek/customer.', 'route' => 'erp.crm.activities', 'icon' => 'share'],
+        ]);
     }
 
     public function reporting(): Response

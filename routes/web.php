@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\CashflowController;
+use App\Http\Controllers\CrmActivityController;
+use App\Http\Controllers\ErpCalendarController;
+use App\Http\Controllers\CrmCustomerController;
+use App\Http\Controllers\CrmLeadController;
+use App\Http\Controllers\CrmPipelineController;
 use App\Http\Controllers\CashInController;
 use App\Http\Controllers\CashOutController;
 use App\Http\Controllers\CmsMediaController;
@@ -83,6 +88,22 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/projects', [ERPModuleController::class, 'projects'])->name('erp.projects');
         Route::get('erp/hr', [ERPModuleController::class, 'hr'])->name('erp.hr');
         Route::get('erp/crm', [ERPModuleController::class, 'crm'])->name('erp.crm');
+        Route::get('erp/crm/leads', [CrmLeadController::class, 'index'])->name('erp.crm.leads');
+        Route::post('erp/crm/leads', [CrmLeadController::class, 'store'])->name('erp.crm.leads.store');
+        Route::patch('erp/crm/leads/{crmLead}', [CrmLeadController::class, 'update'])->name('erp.crm.leads.update');
+        Route::delete('erp/crm/leads/{crmLead}', [CrmLeadController::class, 'destroy'])->name('erp.crm.leads.destroy');
+        Route::get('erp/crm/customers', [CrmCustomerController::class, 'index'])->name('erp.crm.customers');
+        Route::post('erp/crm/customers', [CrmCustomerController::class, 'store'])->name('erp.crm.customers.store');
+        Route::patch('erp/crm/customers/{crmCustomer}', [CrmCustomerController::class, 'update'])->name('erp.crm.customers.update');
+        Route::delete('erp/crm/customers/{crmCustomer}', [CrmCustomerController::class, 'destroy'])->name('erp.crm.customers.destroy');
+        Route::get('erp/crm/pipelines', [CrmPipelineController::class, 'index'])->name('erp.crm.pipelines');
+        Route::post('erp/crm/pipelines', [CrmPipelineController::class, 'store'])->name('erp.crm.pipelines.store');
+        Route::patch('erp/crm/pipelines/{crmPipeline}', [CrmPipelineController::class, 'update'])->name('erp.crm.pipelines.update');
+        Route::delete('erp/crm/pipelines/{crmPipeline}', [CrmPipelineController::class, 'destroy'])->name('erp.crm.pipelines.destroy');
+        Route::get('erp/crm/activities', [CrmActivityController::class, 'index'])->name('erp.crm.activities');
+        Route::post('erp/crm/activities', [CrmActivityController::class, 'store'])->name('erp.crm.activities.store');
+        Route::patch('erp/crm/activities/{crmActivity}', [CrmActivityController::class, 'update'])->name('erp.crm.activities.update');
+        Route::delete('erp/crm/activities/{crmActivity}', [CrmActivityController::class, 'destroy'])->name('erp.crm.activities.destroy');
         Route::get('erp/hr/employees', [HREmployeeController::class, 'index'])->name('erp.hr.employees');
         Route::post('erp/hr/employees', [HREmployeeController::class, 'store'])->name('erp.hr.employees.store');
         Route::patch('erp/hr/employees/{employee}', [HREmployeeController::class, 'update'])->name('erp.hr.employees.update');
@@ -94,8 +115,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('erp/hr/legal/items', [HRLegalController::class, 'destroyItem'])->name('erp.hr.legal.items.destroy');
         Route::get('erp/hr/legal/files/download', [HRLegalController::class, 'downloadFile'])->name('erp.hr.legal.files.download');
         Route::get('erp/hr/legal/files/view', [HRLegalController::class, 'viewFile'])->name('erp.hr.legal.files.view');
+        Route::get('erp/calendar', [ErpCalendarController::class, 'index'])->name('erp.calendar');
         Route::get('erp/reporting', [ERPModuleController::class, 'reporting'])->name('erp.reporting');
         Route::get('erp/master-products', [ERPMasterProductController::class, 'index'])->name('erp.master-products.index');
+        Route::get('erp/master-products/preview-codes', [ERPMasterProductController::class, 'previewCodes'])->name('erp.master-products.preview-codes');
         Route::post('erp/master-products', [ERPMasterProductController::class, 'store'])->name('erp.master-products.store');
         Route::get('erp/master-products/{masterProduct}', [ERPMasterProductController::class, 'show'])->name('erp.master-products.show');
         Route::post('erp/master-products/{masterProduct}/print-barcode', [ERPMasterProductController::class, 'printBarcode'])->name('erp.master-products.print-barcode');
