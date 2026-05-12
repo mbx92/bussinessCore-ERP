@@ -764,6 +764,21 @@ class ERPAdministrationMasterDataController extends Controller
             $msg .= " {$errCount} baris dilewati (lihat detail di bawah).";
         }
 
+        $created = $import->autoCreated;
+        $autoMsgs = [];
+        if (count($created['categories']) > 0) {
+            $autoMsgs[] = count($created['categories']).' kategori baru';
+        }
+        if (count($created['uoms']) > 0) {
+            $autoMsgs[] = count($created['uoms']).' UOM baru';
+        }
+        if (count($created['warehouses']) > 0) {
+            $autoMsgs[] = count($created['warehouses']).' gudang baru';
+        }
+        if (count($autoMsgs) > 0) {
+            $msg .= ' Master data dibuat otomatis: '.implode(', ', $autoMsgs).'.';
+        }
+
         return redirect()
             ->route('erp.admin.data-import', ['tab' => 'products'])
             ->with('flash', [
@@ -772,6 +787,7 @@ class ERPAdministrationMasterDataController extends Controller
                 'import_errors' => $import->errors,
                 'imported_count' => $import->imported,
                 'import_kind' => 'products',
+                'auto_created' => $created,
             ]);
     }
 
@@ -788,6 +804,9 @@ class ERPAdministrationMasterDataController extends Controller
         $msg = "Impor project selesai: {$import->imported} baris disimpan.";
         if ($errCount > 0) {
             $msg .= " {$errCount} baris dilewati (lihat detail di bawah).";
+        }
+        if (count($import->autoCreatedUsers) > 0) {
+            $msg .= ' User baru dibuat otomatis: '.implode(', ', $import->autoCreatedUsers).'.';
         }
 
         return redirect()

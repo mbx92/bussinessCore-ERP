@@ -19,6 +19,9 @@ class MasterProductsImport implements ToCollection, WithHeadingRow
     /** @var list<array{row: int, message: string}> */
     public array $errors = [];
 
+    /** @var array{categories: list<string>, uoms: list<string>, warehouses: list<string>} */
+    public array $autoCreated = ['categories' => [], 'uoms' => [], 'warehouses' => []];
+
     public function collection(Collection $rows): void
     {
         $line = 1;
@@ -45,17 +48,33 @@ class MasterProductsImport implements ToCollection, WithHeadingRow
             }
 
             $category = isset($data['category']) ? trim((string) $data['category']) : '';
-            if ($category === '' || ! ProductCategory::query()->where('name', $category)->exists()) {
-                $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: kategori tidak terdaftar ({$category}). Buat kategori di master data dulu."];
+            if ($category === '') {
+                $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: kategori wajib diisi."];
 
                 continue;
             }
+            if (! ProductCategory::query()->where('name', $category)->exists()) {
+                ProductCategory::query()->create([
+                    'name' => $category,
+                    'description' => "Auto-created from import",
+                    'status' => 'active',
+                ]);
+                $this->autoCreated['categories'][] = $category;
+            }
 
             $uom = isset($data['uom']) ? strtolower(trim((string) $data['uom'])) : '';
-            if ($uom === '' || ! Uom::query()->where('code', $uom)->exists()) {
-                $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: UOM tidak terdaftar ({$uom})."];
+            if ($uom === '') {
+                $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: UOM wajib diisi."];
 
                 continue;
+            }
+            if (! Uom::query()->where('code', $uom)->exists()) {
+                Uom::query()->create([
+                    'code' => $uom,
+                    'name' => ucfirst($uom),
+                    'status' => 'active',
+                ]);
+                $this->autoCreated['uoms'][] = $uom;
             }
 
             $salesChannel = strtolower(trim((string) ($data['sales_channel'] ?? 'both')));
@@ -116,18 +135,25 @@ class MasterProductsImport implements ToCollection, WithHeadingRow
             if ($warehouseCode !== '') {
                 $warehouseId = Warehouse::query()->where('code', $warehouseCode)->value('id');
                 if (! $warehouseId) {
-                    $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: warehouse_code tidak ditemukan ({$warehouseCode})."];
-
-                    continue;
+                    $warehouse = Warehouse::query()->create([
+                        'code' => $warehouseCode,
+                        'name' => "Gudang {$warehouseCode}",
+                        'is_active' => true,
+                    ]);
+                    $warehouseId = $warehouse->id;
+                    $this->autoCreated['warehouses'][] = $warehouseCode;
                 }
             } else {
                 $warehouseId = Warehouse::query()->where('is_active', true)->orderBy('id')->value('id');
-            }
-
-            if (! $warehouseId) {
-                $this->errors[] = ['row' => $line, 'message' => "SKU {$sku}: tidak ada gudang aktif; buat gudang dulu atau isi warehouse_code."];
-
-                continue;
+                if (! $warehouseId) {
+                    $warehouse = Warehouse::query()->create([
+                        'code' => 'WH-MAIN',
+                        'name' => 'Gudang Utama',
+                        'is_active' => true,
+                    ]);
+                    $warehouseId = $warehouse->id;
+                    $this->autoCreated['warehouses'][] = 'WH-MAIN';
+                }
             }
 
             $payload = [

@@ -12,7 +12,9 @@ class UomSeeder extends Seeder
     {
         $uoms = [
             ['code' => 'pcs', 'name' => 'Pieces'],
+            ['code' => 'unit', 'name' => 'Unit'],
             ['code' => 'pack', 'name' => 'Pack'],
+            ['code' => 'paket', 'name' => 'Paket'],
             ['code' => 'dus', 'name' => 'Dus/Karton'],
             ['code' => 'roll', 'name' => 'Roll'],
             ['code' => 'box', 'name' => 'Box'],
@@ -22,13 +24,14 @@ class UomSeeder extends Seeder
             ['code' => 'gram', 'name' => 'Gram'],
             ['code' => 'meter', 'name' => 'Meter'],
             ['code' => 'set', 'name' => 'Set'],
-            ['code' => 'unit', 'name' => 'Unit'],
             ['code' => 'liter', 'name' => 'Liter'],
             ['code' => 'ml', 'name' => 'Mililiter'],
             ['code' => 'lembar', 'name' => 'Lembar/Sheet'],
             ['code' => 'batang', 'name' => 'Batang'],
             ['code' => 'pair', 'name' => 'Pasang'],
             ['code' => 'bundle', 'name' => 'Bundle/Ikat'],
+            ['code' => 'titik', 'name' => 'Titik'],
+            ['code' => 'pekerjaan', 'name' => 'Pekerjaan'],
         ];
 
         foreach ($uoms as $uom) {

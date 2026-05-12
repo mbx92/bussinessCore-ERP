@@ -349,6 +349,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CoaSeeder::class);
         $this->call(ProductCategorySeeder::class);
         $this->call(UomSeeder::class);
+        $this->call(WarehouseSeeder::class);
         $this->call(LabelProfileSeeder::class);
     }
 }

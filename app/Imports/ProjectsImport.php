@@ -8,6 +8,9 @@ use App\Models\MasterProductWarehouseStock;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
 use App\Models\ProjectPayment;
+use App\Models\TeamDistribution;
+use App\Models\TeamRole;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +26,12 @@ class ProjectsImport implements ToCollection, WithHeadingRow
     /** @var list<array{row: int, message: string}> */
     public array $errors = [];
 
+    /** @var list<string> emails auto-created during import */
+    public array $autoCreatedUsers = [];
+
+    /** @var array<string, Project> import_key => Project (projects created/updated in this session) */
+    private array $sessionProjects = [];
+
     public function collection(Collection $rows): void
     {
         $line = 1;
@@ -35,6 +44,22 @@ class ProjectsImport implements ToCollection, WithHeadingRow
             }
 
             $name = isset($data['name']) ? trim((string) $data['name']) : '';
+
+            $importKey = isset($data['import_key']) ? trim((string) $data['import_key']) : '';
+            if ($importKey === '') {
+                $importKey = null;
+            }
+
+            // Multi-row: if this import_key was already processed, just add item/team
+            if ($importKey && isset($this->sessionProjects[$importKey])) {
+                $project = $this->sessionProjects[$importKey];
+                $label = $name !== '' ? $name : $importKey;
+                $this->safeMaterialUpsert($project, $data, $line, "{$label} (baris tambahan)");
+                $this->safeTeamUpsert($project, $data, $line, "{$label} (baris tambahan)");
+
+                continue;
+            }
+
             if ($name === '') {
                 $this->errors[] = ['row' => $line, 'message' => 'Kolom name wajib diisi.'];
 
@@ -49,8 +74,8 @@ class ProjectsImport implements ToCollection, WithHeadingRow
             }
 
             $totalValue = $this->toDecimal($data['total_value'] ?? 0);
-            if ((float) $totalValue < 0.01) {
-                $this->errors[] = ['row' => $line, 'message' => "Project \"{$name}\": total_value harus lebih dari 0."];
+            if ((float) $totalValue < 0) {
+                $this->errors[] = ['row' => $line, 'message' => "Project \"{$name}\": total_value tidak boleh negatif."];
 
                 continue;
             }
@@ -82,11 +107,6 @@ class ProjectsImport implements ToCollection, WithHeadingRow
             $invoiceNumber = isset($data['invoice_number']) ? trim((string) $data['invoice_number']) : '';
             if ($invoiceNumber === '') {
                 $invoiceNumber = null;
-            }
-
-            $importKey = isset($data['import_key']) ? trim((string) $data['import_key']) : '';
-            if ($importKey === '') {
-                $importKey = null;
             }
 
             $existing = $importKey
@@ -151,8 +171,13 @@ class ProjectsImport implements ToCollection, WithHeadingRow
                         $project = Project::query()->create($payload);
                     }
 
+                    if ($importKey) {
+                        $this->sessionProjects[$importKey] = $project;
+                    }
+
                     $this->createPaymentRowsForProject($project, $terms);
-                    $this->upsertProjectMaterialFromRow($project, $data);
+                    $this->safeMaterialUpsert($project, $data, $line, $name);
+                    $this->safeTeamUpsert($project, $data, $line, $name);
                 });
             } catch (\Throwable $e) {
                 $this->errors[] = ['row' => $line, 'message' => "Project \"{$name}\": ".$e->getMessage()];
@@ -247,27 +272,15 @@ class ProjectsImport implements ToCollection, WithHeadingRow
         $reservedRaw = $data['item_reserved_qty'] ?? $data['material_reserved_qty'] ?? null;
         $issuedRaw = $data['item_issued_qty'] ?? $data['material_issued_qty'] ?? null;
 
-        $hasMaterialPayload = $sku !== ''
-            || $warehouseCode !== ''
-            || ($plannedRaw !== null && $plannedRaw !== '')
-            || ($reservedRaw !== null && $reservedRaw !== '')
-            || ($issuedRaw !== null && $issuedRaw !== '')
-            || $notes !== '';
-
-        if (! $hasMaterialPayload) {
-            return;
-        }
-
         if ($sku === '') {
-            throw new \RuntimeException('item_sku wajib diisi jika ingin import item/material project.');
+            return;
         }
 
         $product = MasterProduct::query()
             ->where('sku', $sku)
-            ->where('product_type', 'project_material')
             ->first();
         if (! $product) {
-            throw new \RuntimeException("item_sku \"{$sku}\" tidak ditemukan atau bukan project_material.");
+            throw new \RuntimeException("item_sku \"{$sku}\" tidak ditemukan di master produk.");
         }
 
         $plannedQty = (float) $this->toDecimal($plannedRaw);
@@ -277,15 +290,10 @@ class ProjectsImport implements ToCollection, WithHeadingRow
 
         $reservedQty = (float) $this->toDecimal($reservedRaw);
         $issuedQty = (float) $this->toDecimal($issuedRaw);
-        if ($reservedQty < 0 || $issuedQty < 0) {
-            throw new \RuntimeException("Item {$sku}: item_reserved_qty / item_issued_qty tidak boleh negatif.");
-        }
-        if ($reservedQty > $plannedQty) {
-            throw new \RuntimeException("Item {$sku}: item_reserved_qty tidak boleh melebihi item_planned_qty.");
-        }
-        if ($issuedQty > $reservedQty) {
-            throw new \RuntimeException("Item {$sku}: item_issued_qty tidak boleh melebihi item_reserved_qty.");
-        }
+        $reservedQty = max($reservedQty, 0);
+        $issuedQty = max($issuedQty, 0);
+        $reservedQty = min($reservedQty, $plannedQty);
+        $issuedQty = min($issuedQty, $reservedQty);
 
         if ($status === '') {
             $status = 'reserved';
@@ -303,65 +311,115 @@ class ProjectsImport implements ToCollection, WithHeadingRow
             );
         }
 
-        $material = ProjectMaterial::query()->where([
-            'project_id' => $project->id,
-            'master_product_id' => $product->id,
-            'warehouse_id' => $warehouse->id,
-        ])->lockForUpdate()->first();
+        MasterProductWarehouseStock::query()->firstOrCreate(
+            [
+                'master_product_id' => (int) $product->id,
+                'warehouse_id' => (int) $warehouse->id,
+            ],
+            ['qty' => 0, 'reserved_qty' => 0]
+        );
 
-        $oldReserved = (float) ($material?->reserved_qty ?? 0);
-        $deltaReserve = $reservedQty - $oldReserved;
-
-        $stock = MasterProductWarehouseStock::query()
-            ->lockForUpdate()
-            ->firstOrCreate(
-                [
-                    'master_product_id' => (int) $product->id,
-                    'warehouse_id' => (int) $warehouse->id,
-                ],
-                ['qty' => 0, 'reserved_qty' => 0]
-            );
-
-        $stockQty = (float) $stock->qty;
-        $stockReserved = (float) $stock->reserved_qty;
-
-        if ($deltaReserve > 0) {
-            $available = $stockQty - $stockReserved;
-            if ($deltaReserve > $available) {
-                throw new \RuntimeException(
-                    "Item {$sku}: stok tersedia di gudang {$warehouse->code} tidak cukup untuk reserve tambahan {$deltaReserve} (available {$available})."
-                );
-            }
-            $stock->reserved_qty = number_format($stockReserved + $deltaReserve, 2, '.', '');
-            $stock->save();
-        } elseif ($deltaReserve < 0) {
-            $newReserved = max($stockReserved + $deltaReserve, 0);
-            $stock->reserved_qty = number_format($newReserved, 2, '.', '');
-            $stock->save();
-        }
-
-        if ($material) {
-            $material->update([
+        ProjectMaterial::query()->updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'master_product_id' => $product->id,
+                'warehouse_id' => $warehouse->id,
+            ],
+            [
                 'planned_qty' => number_format($plannedQty, 2, '.', ''),
                 'reserved_qty' => number_format($reservedQty, 2, '.', ''),
                 'issued_qty' => number_format($issuedQty, 2, '.', ''),
                 'status' => substr($status, 0, 20),
                 'notes' => $notes !== '' ? $notes : null,
-            ]);
+            ]
+        );
+    }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function upsertTeamMemberFromRow(Project $project, array $data): void
+    {
+        $email = trim((string) ($data['team_email'] ?? ''));
+        $role = strtolower(trim((string) ($data['team_role'] ?? '')));
+        $pct = $data['team_percentage'] ?? null;
+        $bonus = $data['team_bonus'] ?? null;
+
+        $hasTeamPayload = $email !== ''
+            || $role !== ''
+            || ($pct !== null && $pct !== '')
+            || ($bonus !== null && $bonus !== '');
+
+        if (! $hasTeamPayload) {
             return;
         }
 
-        ProjectMaterial::query()->create([
-            'project_id' => $project->id,
-            'master_product_id' => $product->id,
-            'warehouse_id' => $warehouse->id,
-            'planned_qty' => number_format($plannedQty, 2, '.', ''),
-            'reserved_qty' => number_format($reservedQty, 2, '.', ''),
-            'issued_qty' => number_format($issuedQty, 2, '.', ''),
-            'status' => substr($status, 0, 20),
-            'notes' => $notes !== '' ? $notes : null,
-        ]);
+        if ($email === '') {
+            throw new \RuntimeException('team_email wajib diisi jika ingin import anggota tim.');
+        }
+
+        $user = User::query()->where('email', $email)->first();
+        if (! $user) {
+            $namePart = Str::before($email, '@');
+            $user = User::query()->create([
+                'name' => Str::title(str_replace(['.', '_', '-'], ' ', $namePart)),
+                'email' => $email,
+                'password' => bcrypt('password'),
+                'role' => 'technician',
+            ]);
+            $this->autoCreatedUsers[] = $email;
+        }
+
+        if ($role === '') {
+            $role = 'technician';
+        }
+
+        $teamRole = TeamRole::query()->where('name', $role)->first();
+        if (! $teamRole) {
+            TeamRole::query()->create(['name' => $role, 'is_active' => true]);
+        }
+
+        $percentage = (float) $this->toDecimal($pct);
+        if ($percentage <= 0 || $percentage > 100) {
+            $percentage = max(min($percentage, 100), 1);
+        }
+
+        $bonusAmount = (float) $this->toDecimal($bonus);
+        $totalValue = (float) $project->total_value;
+        $basePay = round($totalValue * ($percentage / 100), 2);
+        $totalPay = $basePay + $bonusAmount;
+
+        TeamDistribution::query()->updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'role_in_project' => $role,
+                'percentage' => $percentage,
+                'base_pay' => number_format($basePay, 2, '.', ''),
+                'bonus' => number_format($bonusAmount, 2, '.', ''),
+                'total_pay' => number_format($totalPay, 2, '.', ''),
+            ]
+        );
+    }
+
+    private function safeMaterialUpsert(Project $project, array $data, int $line, string $label): void
+    {
+        try {
+            $this->upsertProjectMaterialFromRow($project, $data);
+        } catch (\Throwable $e) {
+            $this->errors[] = ['row' => $line, 'message' => "Project \"{$label}\": ".$e->getMessage()];
+        }
+    }
+
+    private function safeTeamUpsert(Project $project, array $data, int $line, string $label): void
+    {
+        try {
+            $this->upsertTeamMemberFromRow($project, $data);
+        } catch (\Throwable $e) {
+            $this->errors[] = ['row' => $line, 'message' => "Project \"{$label}\": ".$e->getMessage()];
+        }
     }
 
     /**

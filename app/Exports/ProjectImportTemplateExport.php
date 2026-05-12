@@ -30,6 +30,10 @@ class ProjectImportTemplateExport implements FromArray, WithHeadings
             'item_issued_qty',
             'item_status',
             'item_notes',
+            'team_email',
+            'team_role',
+            'team_percentage',
+            'team_bonus',
         ];
     }
 
@@ -47,7 +51,7 @@ class ProjectImportTemplateExport implements FromArray, WithHeadings
                 'INV-MIG-001',
                 '2025-01-15',
                 '2025-06-30',
-                'Baris 1 project + item pertama',
+                'Baris 1: item + tim lead',
                 '40,35,25',
                 'DP 40%|Progress 35%|Final 25%',
                 'CCTV-UTP-CAT6',
@@ -57,6 +61,10 @@ class ProjectImportTemplateExport implements FromArray, WithHeadings
                 '0',
                 'reserved',
                 'Tarik kabel backbone',
+                'admin@ocn.test',
+                'lead',
+                '60',
+                '500000',
             ],
             [
                 'LEGACY-PRJ-CCTV-001',
@@ -69,7 +77,7 @@ class ProjectImportTemplateExport implements FromArray, WithHeadings
                 'INV-MIG-001',
                 '2025-01-15',
                 '2025-06-30',
-                'Baris 2 item project yang sama',
+                'Baris 2: item + anggota tim',
                 '40,35,25',
                 'DP 40%|Progress 35%|Final 25%',
                 'CCTV-UTP-CAT6',
@@ -79,6 +87,10 @@ class ProjectImportTemplateExport implements FromArray, WithHeadings
                 '0',
                 'reserved',
                 'Penarikan jalur lantai 2',
+                'budi@ocn.test',
+                'teknisi',
+                '40',
+                '0',
             ],
         ];
     }

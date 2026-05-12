@@ -69,7 +69,7 @@ const hasStockColumn = computed(() => normalizedProducts.value.some((item) => it
 </script>
 
 <template>
-  <Modal :show="show" max-width="2xl" @close="emit('close')">
+  <Modal :show="show" max-width="6xl" @close="emit('close')">
     <div class="p-6">
       <h3 class="font-bold text-xl">{{ title }}</h3>
       <p class="text-sm text-base-content/60 mt-2">{{ subtitle }}</p>
@@ -87,7 +87,7 @@ const hasStockColumn = computed(() => normalizedProducts.value.some((item) => it
       </div>
 
       <div class="mt-5 rounded-2xl border border-base-300 overflow-hidden">
-        <div class="max-h-[46vh] overflow-y-auto">
+        <div class="max-h-[60vh] overflow-y-auto">
           <table class="table table-zebra">
           <thead>
             <tr>
