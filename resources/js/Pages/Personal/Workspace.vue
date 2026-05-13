@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 defineProps({
   title: String,
@@ -12,13 +13,22 @@ defineProps({
   <Head :title="`Personal — ${title}`" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Personal Workspace</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">{{ title }}</h1>
-          <Link class="btn btn-ghost btn-sm" :href="route('personal')">Back</Link>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Personal Workspace</p>
+              <h1 class="ocn-panel__title mt-1">{{ title }}</h1>
+              <p class="ocn-panel__desc mt-1">{{ description }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('personal')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
+          </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">{{ description }}</p>
       </div>
 
       <div class="ocn-panel">

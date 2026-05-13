@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
@@ -40,13 +41,22 @@ const formatDate = (dateStr) => {
   <Head title="General Ledger" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Laporan Akuntansi</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">General Ledger</h1>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.accounting')">Back</Link>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Laporan Akuntansi</p>
+              <h1 class="ocn-panel__title mt-1">General Ledger</h1>
+              <p class="ocn-panel__desc mt-1">Catatan jurnal umum seluruh transaksi yang diposting ke buku besar.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.accounting')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
+          </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">Catatan jurnal umum seluruh transaksi yang diposting ke buku besar.</p>
       </div>
 
       <div class="grid gap-3 md:grid-cols-3">

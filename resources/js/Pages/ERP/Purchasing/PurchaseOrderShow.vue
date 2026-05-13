@@ -116,12 +116,13 @@ const submitEdit = () => {
   <Head :title="`PO — ${detail.number}`" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing · Purchase Order</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight font-mono">{{ detail.number }}</h1>
-            <p class="mt-1 text-sm text-base-content/70">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing · Purchase Order</p>
+              <h1 class="ocn-panel__title mt-1">{{ detail.number }}</h1>
+              <p class="ocn-panel__desc mt-1">
               {{ detail.supplier_name }}
               <Link
                 class="link link-primary ml-2 text-xs font-semibold"
@@ -130,15 +131,17 @@ const submitEdit = () => {
                 Profil supplier
               </Link>
             </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
+              <p class="ocn-panel__desc mt-1">Dibuat {{ detail.created_at }} · ETA {{ detail.eta }} · Total {{ formatIdr(detail.amount) }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex flex-wrap items-center gap-2">
             <StatusBadge :status="detail.status" />
-            <button type="button" class="btn btn-ghost btn-sm" @click="goBack">Back</button>
+            <button type="button" class="btn btn-ghost btn-sm shrink-0 gap-1.5" @click="goBack"><ArrowLeftIcon class="h-4 w-4" />
+            Back</button>
+          </div>
+            </div>
           </div>
         </div>
-        <p class="mt-3 text-sm text-base-content/70">
-          Dibuat {{ detail.created_at }} · ETA {{ detail.eta }} · Total {{ formatIdr(detail.amount) }}
-        </p>
       </div>
 
       <div class="grid gap-5 lg:grid-cols-3">

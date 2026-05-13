@@ -107,55 +107,104 @@ const renderMarkdown = (text) => {
     return out.join('');
 };
 
+const permissions = computed(() => page.props.auth?.permissions ?? []);
+const usePermissionMenus = computed(() =>
+    permissions.value.some((p) => typeof p === 'string' && p.startsWith('menu.')),
+);
+
+const canSeeNavItem = (item) => {
+    if (item.permissionAny?.length) {
+        if (!usePermissionMenus.value) {
+            return true;
+        }
+
+        return item.permissionAny.some((p) => permissions.value.includes(p));
+    }
+    if (!item.permission) {
+        return true;
+    }
+    if (!usePermissionMenus.value) {
+        return true;
+    }
+    return permissions.value.includes(item.permission);
+};
+
 const sidebarModules = computed(() => {
     const role = auth.value?.user?.role;
-    const modules = [{ title: 'Main', items: [{ name: 'Dashboard', href: route('dashboard'), icon: HomeIcon }] }];
+    const legacyErp = role === 'admin' || role === 'manajer';
+    const legacyCms = role === 'admin';
+    const legacyPersonal = role === 'admin' || role === 'manajer';
+    const legacyAdmin = role === 'admin';
 
-    if (role === 'admin' || role === 'manajer') {
-        modules.push({
-            title: 'Modul ERP',
-            items: [
-                { name: 'Accounting', href: route('erp.accounting'), icon: ArrowDownCircleIcon },
-                { name: 'Sales', href: route('erp.sales'), icon: BanknotesIcon },
-                { name: 'Purchasing', href: route('erp.purchasing'), icon: ShoppingCartIcon },
-                { name: 'Inventory', href: route('erp.inventory'), icon: ArchiveBoxIcon },
-                { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon },
-                { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon },
-                { name: 'CRM', href: route('erp.crm'), icon: ShareIcon },
-                { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon },
-                { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon },
-            ],
-        });
+    const showErp = usePermissionMenus.value
+        ? permissions.value.some((p) => p.startsWith('menu.erp.'))
+        : legacyErp;
+    const showCms = usePermissionMenus.value
+        ? permissions.value.some((p) => p.startsWith('menu.cms.'))
+        : legacyCms;
+    const showPersonal = usePermissionMenus.value
+        ? permissions.value.includes('menu.personal')
+        : legacyPersonal;
+    const showAdmin = legacyAdmin;
+
+    const modules = [];
+
+    const mainItems = [{ name: 'Dashboard', href: route('dashboard'), icon: HomeIcon, permission: 'menu.dashboard' }]
+        .filter(canSeeNavItem);
+    if (mainItems.length) {
+        modules.push({ title: 'Main', items: mainItems });
     }
 
-    if (role === 'admin') {
-        modules.push({
-            title: 'Website CMS',
-            items: [
-                { name: 'Dashboard CMS', href: route('erp.cms'), icon: NewspaperIcon },
-                { name: 'Landing sites', href: route('erp.cms.sites'), icon: GlobeAltIcon },
-                { name: 'Media library', href: route('erp.cms.media'), icon: PhotoIcon },
-            ],
-        });
+    if (showErp) {
+        const erpItems = [
+            { name: 'Accounting', href: route('erp.accounting'), icon: ArrowDownCircleIcon, permission: 'menu.erp.accounting' },
+            { name: 'Sales', href: route('erp.sales'), icon: BanknotesIcon, permission: 'menu.erp.sales' },
+            { name: 'Purchasing', href: route('erp.purchasing'), icon: ShoppingCartIcon, permission: 'menu.erp.purchasing' },
+            { name: 'Inventory', href: route('erp.inventory'), icon: ArchiveBoxIcon, permission: 'menu.erp.inventory' },
+            { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon, permission: 'menu.erp.projects' },
+            { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon, permission: 'menu.erp.hr' },
+            { name: 'CRM', href: route('erp.crm'), icon: ShareIcon, permission: 'menu.erp.crm' },
+            { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon, permission: 'menu.erp.calendar' },
+            { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon, permission: 'menu.erp.reporting' },
+        ].filter(canSeeNavItem);
+        if (erpItems.length) {
+            modules.push({ title: 'Modul ERP', items: erpItems });
+        }
     }
 
-    if (role === 'admin' || role === 'manajer') {
-        modules.push({
-            title: 'Personal',
-            items: [
-                { name: 'Beranda', href: route('personal'), icon: WalletIcon },
-            ],
-        });
+    if (showCms) {
+        const cmsItems = [
+            { name: 'Dashboard CMS', href: route('erp.cms'), icon: NewspaperIcon, permission: 'menu.cms.dashboard' },
+            { name: 'Landing sites', href: route('erp.cms.sites'), icon: GlobeAltIcon, permission: 'menu.cms.sites' },
+            { name: 'Media library', href: route('erp.cms.media'), icon: PhotoIcon, permission: 'menu.cms.media' },
+        ].filter(canSeeNavItem);
+        if (cmsItems.length) {
+            modules.push({ title: 'Website CMS', items: cmsItems });
+        }
     }
 
-    if (role === 'admin') {
-        modules.push({
-            title: 'Administration',
-            items: [
-                { name: 'Kelola User', href: route('users.index'), icon: UsersIcon },
-                { name: 'Pengaturan ERP', href: route('erp.administration'), icon: BuildingOffice2Icon },
-            ],
-        });
+    if (showPersonal) {
+        const personalItems = [
+            { name: 'Beranda', href: route('personal'), icon: WalletIcon, permission: 'menu.personal' },
+        ].filter(canSeeNavItem);
+        if (personalItems.length) {
+            modules.push({ title: 'Personal', items: personalItems });
+        }
+    }
+
+    if (showAdmin) {
+        const adminItems = [
+            {
+                name: 'Kelola User',
+                href: route('users.index'),
+                icon: UsersIcon,
+                permissionAny: ['menu.administration.users', 'menu.administration.roles'],
+            },
+            { name: 'Pengaturan ERP', href: route('erp.administration'), icon: BuildingOffice2Icon, permission: 'menu.administration.erp_settings' },
+        ].filter(canSeeNavItem);
+        if (adminItems.length) {
+            modules.push({ title: 'Administration', items: adminItems });
+        }
     }
 
     return modules;
@@ -175,6 +224,10 @@ const topbarContext = computed(() => {
     if (pathname.includes('/erp/calendar')) return { label: 'Calendar Workspace', subtitle: 'Jadwal event project, PO, pipeline, dan follow-up.' };
     if (pathname.includes('/erp/crm')) return { label: 'CRM Workspace', subtitle: 'Kelola prospek, customer, dan aktivitas follow-up.' };
     if (pathname.startsWith('/personal')) return { label: 'Personal Workspace', subtitle: 'Pencatatan keuangan pribadi dan keluarga.' };
+    if (pathname.startsWith('/users/roles-permissions')) return { label: 'Roles & permission', subtitle: 'Atur hak akses menu per role.' };
+    if (pathname.startsWith('/users/accounts')) return { label: 'User', subtitle: 'Daftar akun, role, dan tindakan pengguna.' };
+    if (pathname === '/users' || pathname === '/users/') return { label: 'Kelola User', subtitle: 'Pilih submenu pengaturan akun dan hak akses.' };
+    if (pathname.startsWith('/users')) return { label: 'Kelola User', subtitle: 'Pengaturan pengguna sistem.' };
     if (pathname.startsWith('/erp/cms')) return { label: 'Website CMS', subtitle: 'Konten landing publik, media, dan publikasi halaman.' };
 
     return { label: 'ERP Command Center', subtitle: 'Satu dashboard untuk finance, project, dan operasional.' };

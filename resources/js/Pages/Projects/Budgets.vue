@@ -4,7 +4,8 @@ import CurrencyInput from '@/Components/CurrencyInput.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
-import { MagnifyingGlassIcon } from '@heroicons/vue/24/outline';
+import {ArrowLeftIcon,
+  MagnifyingGlassIcon} from '@heroicons/vue/24/outline';
 
 const props = defineProps({ budgets: Array });
 const { format } = useCurrency();
@@ -61,15 +62,15 @@ const submit = () => {
     <Head title="Budgeting Project" />
     <AppLayout>
         <div class="space-y-5">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
-                        <h1 class="mt-2 text-3xl font-bold tracking-tight">Budgeting Project</h1>
-                        <p class="mt-2 text-sm text-base-content/70">Klik baris untuk lihat detail budget, edit, dan aksi deal/convert.</p>
-                    </div>
-                </div>
-            </div>
+            <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
+            <h1 class="ocn-panel__title mt-1">Budgeting Project</h1>
+              <p class="ocn-panel__desc mt-1">Klik baris untuk lihat detail budget, edit, dan aksi deal/convert.</p>
+          </div>
+        </div>
+      </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <article class="rounded-2xl border border-slate-700/40 bg-gradient-to-br from-slate-800 to-slate-950 p-5 text-white shadow-xl ring-1 ring-black/20">

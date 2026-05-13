@@ -2,7 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { computed, ref, nextTick } from 'vue';
-import {
+import {ArrowLeftIcon,
   RocketLaunchIcon,
   CheckBadgeIcon,
   ClipboardDocumentCheckIcon,
@@ -17,8 +17,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   XMarkIcon,
-  MapPinIcon,
-} from '@heroicons/vue/24/outline';
+  MapPinIcon,} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   events: Array,
@@ -226,15 +225,22 @@ const formatEventDate = (dateStr) => {
   <AppLayout>
     <div class="space-y-5">
       <!-- Header -->
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Calendar Workspace</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">Calendar</h1>
-          <Link class="btn btn-ghost btn-sm" :href="route('dashboard')">Back</Link>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Calendar Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Calendar</h1>
+              <p class="ocn-panel__desc mt-1">Jadwal event dari seluruh modul ERP: project, pembayaran termin, purchase order, pipeline CRM, dan follow-up.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('dashboard')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
+          </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">
-          Jadwal event dari seluruh modul ERP: project, pembayaran termin, purchase order, pipeline CRM, dan follow-up.
-        </p>
       </div>
 
       <!-- Stats mini cards -->

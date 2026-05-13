@@ -9,7 +9,14 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, HasRoles, Notifiable;
+
+    /**
+     * Spatie role names shown in Add/Edit user and Roles & permission (guard web).
+     *
+     * @var list<string>
+     */
+    public const ASSIGNABLE_ROLE_NAMES = ['admin', 'manajer', 'anggota'];
 
     protected $fillable = [
         'name',

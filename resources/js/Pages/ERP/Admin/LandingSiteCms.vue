@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   landingSite: Object,
@@ -33,16 +34,23 @@ const submit = () => {
   <Head title="Administration - Landing CMS" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">{{ cmsModule ? 'Website CMS' : 'Administration Workspace' }}</p>
-        <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Landing CMS</h1>
-            <p class="mt-2 text-sm text-base-content/70">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">{{ cmsModule ? 'Website CMS' : 'Administration Workspace' }}</p>
+              <h1 class="ocn-panel__title mt-1">Landing CMS</h1>
+              <p class="ocn-panel__desc mt-1">
               Domain: <span class="font-mono text-xs">{{ landingSite?.domain }}</span>
             </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="cmsModule ? route('erp.cms.sites') : route('erp.admin.landing-sites')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="cmsModule ? route('erp.cms.sites') : route('erp.admin.landing-sites')">Back</Link>
         </div>
       </div>
 

@@ -44,6 +44,7 @@ class ERPAdministrationMasterDataController extends Controller
                 'app_tagline' => $setting?->app_tagline ?? 'Integrated Business Platform',
                 'app_logo_path' => $setting?->app_logo_path,
                 'app_logo_url' => $setting?->app_logo_path ? Storage::url($setting->app_logo_path) : null,
+                'module_menu_layout' => $setting?->resolvedModuleMenuLayout() ?? ErpSetting::MODULE_MENU_LAYOUT_GRID,
             ],
         ]);
     }
@@ -55,6 +56,7 @@ class ERPAdministrationMasterDataController extends Controller
             'app_tagline' => 'nullable|string|max:190',
             'app_logo' => 'nullable|image|max:2048',
             'remove_logo' => 'nullable|boolean',
+            'module_menu_layout' => ['required', Rule::in(ErpSetting::moduleMenuLayoutOptions())],
         ]);
 
         $setting = ErpSetting::query()->firstOrCreate([], [
@@ -79,6 +81,7 @@ class ERPAdministrationMasterDataController extends Controller
             'app_name' => $validated['app_name'],
             'app_tagline' => $validated['app_tagline'] ?? null,
             'app_logo_path' => $logoPath,
+            'module_menu_layout' => $validated['module_menu_layout'],
         ]);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'ERP Setting berhasil diperbarui.']);

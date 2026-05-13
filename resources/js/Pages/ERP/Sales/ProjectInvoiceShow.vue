@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
@@ -107,18 +108,25 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
   <Head :title="`Invoice - ${invoice.number}`" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sales Workspace</p>
-            <h1 class="mt-2 text-3xl font-bold tracking-tight">{{ invoice.number }}</h1>
-            <p class="text-base-content/60">{{ invoice.project }} · {{ invoice.client }}</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sales Workspace</p>
+              <h1 class="ocn-panel__title mt-1">{{ invoice.number }}</h1>
+              <p class="text-sm text-base-content/60 mt-1">{{ invoice.project }} · {{ invoice.client }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex flex-wrap items-center gap-2">
             <StatusBadge :status="invoice.status" />
             <button class="btn btn-outline btn-sm" @click="downloadInvoice">Download Invoice</button>
             <button class="btn btn-primary btn-sm" :disabled="invoice.remaining_amount <= 0" @click="openPaymentModal">Tambah Pembayaran</button>
-            <Link class="btn btn-ghost btn-sm" :href="route('erp.sales.project-invoices')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.sales.project-invoices')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
       </div>

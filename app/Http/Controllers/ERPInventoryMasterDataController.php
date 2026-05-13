@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\ERP\Inventory\Models\Warehouse;
+use App\Models\MasterProductUomMapping;
 use App\Models\ProductCategory;
 use App\Models\Uom;
 use App\Models\UomConversion;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -137,6 +139,33 @@ class ERPInventoryMasterDataController extends Controller
         return back()->with('flash', ['type' => 'success', 'message' => 'UoM berhasil ditambahkan.']);
     }
 
+    public function updateUom(Request $request, Uom $uom): RedirectResponse
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:20|unique:uoms,code,'.$uom->id,
+            'name' => 'required|string|max:50',
+            'status' => 'required|in:active,inactive',
+        ]);
+
+        $uom->update($validated);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'UoM berhasil diperbarui.']);
+    }
+
+    public function destroyUom(Uom $uom): RedirectResponse
+    {
+        if (MasterProductUomMapping::query()->where('uom_code', $uom->code)->exists()) {
+            return back()->with('flash', [
+                'type' => 'error',
+                'message' => 'UoM tidak dapat dihapus karena masih dipakai pada mapping produk master.',
+            ]);
+        }
+
+        $uom->delete();
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'UoM berhasil dihapus.']);
+    }
+
     public function storeConversion(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -151,5 +180,36 @@ class ERPInventoryMasterDataController extends Controller
         );
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Konversi UoM berhasil disimpan.']);
+    }
+
+    public function updateConversion(Request $request, UomConversion $uomConversion): RedirectResponse
+    {
+        $validated = $request->validate([
+            'from_uom_id' => 'required|exists:uoms,id',
+            'to_uom_id' => [
+                'required',
+                'exists:uoms,id',
+                'different:from_uom_id',
+                Rule::unique('uom_conversions', 'to_uom_id')
+                    ->where(fn ($query) => $query->where('from_uom_id', $request->input('from_uom_id')))
+                    ->ignore($uomConversion->id),
+            ],
+            'multiplier' => 'required|numeric|gt:0',
+        ]);
+
+        $uomConversion->update([
+            'from_uom_id' => $validated['from_uom_id'],
+            'to_uom_id' => $validated['to_uom_id'],
+            'multiplier' => $validated['multiplier'],
+        ]);
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Konversi UoM berhasil diperbarui.']);
+    }
+
+    public function destroyConversion(UomConversion $uomConversion): RedirectResponse
+    {
+        $uomConversion->delete();
+
+        return back()->with('flash', ['type' => 'success', 'message' => 'Konversi UoM berhasil dihapus.']);
     }
 }

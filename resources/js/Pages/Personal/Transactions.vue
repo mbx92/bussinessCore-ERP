@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
@@ -126,17 +127,24 @@ const editCategoryOptions = computed(() => (editForm.type === 'income' ? incomeC
   <Head title="Personal — Transaksi" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Personal</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Pemasukan &amp; pengeluaran</h1>
-            <p class="mt-2 text-sm text-base-content/70">Transaksi terbaru (200 entri) dan kategori kustom.</p>
-          </div>
-          <div class="flex flex-wrap gap-2">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Personal</p>
+              <h1 class="ocn-panel__title mt-1">Pemasukan &amp; pengeluaran</h1>
+              <p class="ocn-panel__desc mt-1">Transaksi terbaru (200 entri) dan kategori kustom.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex flex-wrap gap-2">
             <button type="button" class="btn btn-outline btn-sm" @click="document.getElementById('modal-add-category')?.showModal()">+ Kategori</button>
             <button type="button" class="btn btn-primary btn-sm" @click="openAddTx">+ Transaksi</button>
-            <Link class="btn btn-ghost btn-sm" :href="route('personal')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('personal')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
       </div>

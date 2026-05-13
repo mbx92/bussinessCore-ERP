@@ -1,6 +1,7 @@
 <script setup>
+import WorkspaceMenuCollection from '@/Components/WorkspaceMenuCollection.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
   ArrowDownCircleIcon,
   ArrowUpCircleIcon,
@@ -31,11 +32,14 @@ import {
   ShareIcon,
   Cog6ToothIcon,
 } from '@heroicons/vue/24/outline';
+import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
   module: String,
   menus: Array,
 });
+
+const page = usePage();
 
 const iconMap = {
   'arrow-down-circle': ArrowDownCircleIcon,
@@ -68,6 +72,14 @@ const iconMap = {
 };
 
 const iconFor = (menu) => iconMap[menu.icon] ?? Squares2X2Icon;
+const menuLayout = computed(() => page.props.erpSetting?.module_menu_layout ?? 'grid');
+const workspaceMenus = computed(() =>
+  (props.menus ?? []).map((menu) => ({
+    ...menu,
+    href: menu.url ?? route(menu.route),
+    iconComponent: iconFor(menu),
+  })),
+);
 </script>
 
 <template>
@@ -85,41 +97,13 @@ const iconFor = (menu) => iconMap[menu.icon] ?? Squares2X2Icon;
         </p>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <a
-          v-for="menu in menus.filter((m) => m.newTab)"
-          :key="`newtab-${menu.title}`"
-          :href="menu.url ?? route(menu.route)"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="group relative flex min-h-[210px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-        >
-          <span class="absolute left-0 top-4 h-0 w-1 rounded-r bg-primary/70 transition-all duration-300 group-hover:h-16"></span>
-          <component
-            :is="iconFor(menu)"
-            class="pointer-events-none absolute right-2 bottom-1 h-24 w-24 text-primary/10 transition duration-300 group-hover:scale-125 group-hover:text-primary/20"
-          />
-          <h2 class="text-lg font-semibold group-hover:text-primary">{{ menu.title }}</h2>
-          <p class="mt-2 max-w-[85%] text-sm text-base-content/65">{{ menu.description }}</p>
-          <p class="mt-auto pt-4 text-xs font-semibold uppercase tracking-[0.12em] text-primary/70">Open Menu (New Tab)</p>
-        </a>
-
-        <Link
-          v-for="menu in menus.filter((m) => !m.newTab)"
-          :key="`normal-${menu.title}`"
-          :href="menu.url ?? route(menu.route)"
-          class="group relative flex min-h-[210px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-        >
-          <span class="absolute left-0 top-4 h-0 w-1 rounded-r bg-primary/70 transition-all duration-300 group-hover:h-16"></span>
-          <component
-            :is="iconFor(menu)"
-            class="pointer-events-none absolute right-2 bottom-1 h-24 w-24 text-primary/10 transition duration-300 group-hover:scale-125 group-hover:text-primary/20"
-          />
-          <h2 class="text-lg font-semibold group-hover:text-primary">{{ menu.title }}</h2>
-          <p class="mt-2 max-w-[85%] text-sm text-base-content/65">{{ menu.description }}</p>
-          <p class="mt-auto pt-4 text-xs font-semibold uppercase tracking-[0.12em] text-primary/70">Open Menu</p>
-        </Link>
-      </div>
+      <WorkspaceMenuCollection
+        :menus="workspaceMenus"
+        :layout="menuLayout"
+        empty-message="Belum ada submenu yang tersedia untuk modul ini."
+        action-label="Open menu"
+        action-new-tab-label="Open menu (New Tab)"
+      />
     </div>
   </AppLayout>
 </template>

@@ -45,6 +45,9 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->roles->first()?->name,
                 ] : null,
+                'permissions' => $user
+                    ? $user->getAllPermissions()->pluck('name')->values()->all()
+                    : [],
             ],
             'flash' => fn () => $request->session()->get('flash'),
             'devLoginSeed' => fn () => $request->session()->get('devLoginSeed'),
@@ -60,6 +63,7 @@ class HandleInertiaRequests extends Middleware
                 'app_name' => $erpSetting?->app_name ?? 'OCN ERP Suite',
                 'app_tagline' => $erpSetting?->app_tagline ?? 'Integrated Business Platform',
                 'app_logo_url' => $erpSetting?->app_logo_path ? Storage::url($erpSetting->app_logo_path) : null,
+                'module_menu_layout' => $erpSetting?->resolvedModuleMenuLayout() ?? ErpSetting::MODULE_MENU_LAYOUT_GRID,
             ],
             'maintenance' => fn () => [
                 'global' => (bool) ($erpSetting?->maintenance_global_enabled ?? false),

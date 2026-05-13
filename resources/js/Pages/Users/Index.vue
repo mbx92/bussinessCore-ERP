@@ -3,17 +3,34 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import DataTablePagination from '@/Components/DataTablePagination.vue';
-import { useForm, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, useForm, router, Link } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { computed, ref } from 'vue';
 
-defineProps({ users: Object, roles: Array, filters: Object });
+const props = defineProps({ users: Object, roles: Array, filters: Object });
+
+const roleOptions = computed(() => {
+    if (Array.isArray(props.roles) && props.roles.length) {
+        return props.roles;
+    }
+
+    return [
+        { id: 'admin', name: 'admin' },
+        { id: 'manajer', name: 'manajer' },
+        { id: 'anggota', name: 'anggota' },
+    ];
+});
 
 const form = useForm({ name: '', email: '', password: '', password_confirmation: '', role: 'anggota' });
 const editingId = ref(null);
 const editForm = useForm({ name: '', email: '', password: '', password_confirmation: '', role: 'anggota' });
 
 const submitAdd = () => form.post(route('users.store'), {
-    onSuccess: () => { form.reset(); document.getElementById('modal-add-user').close(); }
+    onSuccess: () => {
+        form.reset();
+        form.role = 'anggota';
+        document.getElementById('modal-add-user')?.close();
+    },
 });
 
 const openEdit = (u) => {
@@ -23,52 +40,87 @@ const openEdit = (u) => {
     editForm.role  = u.role;
     editForm.password = '';
     editForm.password_confirmation = '';
-    document.getElementById('modal-edit-user').showModal();
+    document.getElementById('modal-edit-user')?.showModal();
 };
 
 const submitEdit = () => editForm.put(route('users.update', editingId.value), {
-    onSuccess: () => document.getElementById('modal-edit-user').close()
+    onSuccess: () => document.getElementById('modal-edit-user')?.close(),
 });
 
 const deletingId = ref(null);
-const confirmDelete = (id) => { deletingId.value = id; document.getElementById('modal-delete-user').showModal(); };
+const confirmDelete = (id) => {
+    deletingId.value = id;
+    document.getElementById('modal-delete-user')?.showModal();
+};
 const doDelete = () => { router.delete(route('users.destroy', deletingId.value)); };
 </script>
 
 <template>
+    <Head title="Kelola User - User Account" />
     <AppLayout>
         <div class="space-y-5">
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold">Kelola User</h1>
-                <button class="btn btn-primary btn-sm" onclick="document.getElementById('modal-add-user').showModal()">+ Tambah User</button>
+            <div class="ocn-panel">
+                <div class="ocn-panel__head">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Kelola User</p>
+                            <h1 class="ocn-panel__title mt-1">User Account</h1>
+                            <p class="ocn-panel__desc mt-1">Kelola akun pengguna ERP dan penugasan role admin, manajer, atau anggota.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                            <Link class="btn btn-ghost btn-sm gap-1.5" :href="route('users.index')">
+                                <ArrowLeftIcon class="h-4 w-4" />
+                                Back
+                            </Link>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="ocn-panel">
-                <div class="ocn-panel__head">
-                    <h2 class="ocn-panel__title">Daftar pengguna</h2>
-                    <p class="ocn-panel__desc">Akun yang dapat mengakses ERP beserta perannya.</p>
+                <div class="ocn-panel__head flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 class="ocn-panel__title">Daftar pengguna</h2>
+                        <p class="ocn-panel__desc">Akun yang dapat mengakses ERP beserta role yang sedang dipakai.</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="badge badge-ghost badge-sm">{{ users.total ?? users.data?.length ?? 0 }} akun</span>
+                        <button class="btn btn-primary btn-sm" @click="document.getElementById('modal-add-user')?.showModal()">
+                            + Tambah User
+                        </button>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="table table-zebra">
-                        <thead><tr><th>Nama</th><th>Email</th><th>Role</th><th></th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Nama</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             <tr v-for="u in users.data" :key="u.id">
                                 <td class="font-medium">{{ u.name }}</td>
                                 <td>{{ u.email }}</td>
                                 <td><StatusBadge :status="u.role" /></td>
-                                <td>
-                                    <div class="flex gap-1">
+                                <td class="text-right">
+                                    <div class="flex justify-end gap-1">
                                         <button class="btn btn-ghost btn-xs" @click="openEdit(u)">Edit</button>
                                         <button class="btn btn-ghost btn-xs text-error" @click="confirmDelete(u.id)">Hapus</button>
                                     </div>
                                 </td>
+                            </tr>
+                            <tr v-if="!users.data.length">
+                                <td colspan="4" class="py-10 text-center text-base-content/50">Belum ada akun pengguna.</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <DataTablePagination
                     :paginator="users"
-                    @update:per-page="(n) => router.get(route('users.index'), { per_page: n }, { preserveState: true, replace: true })"
+                    @update:per-page="(n) => router.get(route('users.accounts'), { per_page: n }, { preserveState: true, replace: true })"
                 />
             </div>
         </div>
@@ -99,9 +151,9 @@ const doDelete = () => { router.delete(route('users.destroy', deletingId.value))
                     <div>
                         <label class="label"><span class="label-text">Role</span></label>
                         <select v-model="form.role" class="select select-bordered w-full">
-                            <option value="admin">Admin</option>
-                            <option value="manajer">Manajer</option>
-                            <option value="anggota">Anggota</option>
+                            <option v-for="role in roleOptions" :key="role.id" :value="role.name">
+                                {{ role.name }}
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -137,9 +189,9 @@ const doDelete = () => { router.delete(route('users.destroy', deletingId.value))
                     <div>
                         <label class="label"><span class="label-text">Role</span></label>
                         <select v-model="editForm.role" class="select select-bordered w-full">
-                            <option value="admin">Admin</option>
-                            <option value="manajer">Manajer</option>
-                            <option value="anggota">Anggota</option>
+                            <option v-for="role in roleOptions" :key="role.id" :value="role.name">
+                                {{ role.name }}
+                            </option>
                         </select>
                     </div>
                 </div>

@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
-import { ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
+import { ArrowLeftIcon, ArrowUpTrayIcon, DocumentTextIcon } from '@heroicons/vue/24/outline';
 
 defineProps({
     media: Array,
@@ -127,14 +127,21 @@ const thumbSrc = (item) => {
   <Head title="CMS — Media" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Website CMS</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Media library</h1>
-            <p class="mt-2 text-sm text-base-content/70">File di disk publik (folder cms-media). Maks. 5 MB per unggahan. Seret file ke area di bawah atau klik untuk memilih.</p>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Website CMS</p>
+              <h1 class="ocn-panel__title mt-1">Media library</h1>
+              <p class="ocn-panel__desc mt-1">File di disk publik (folder cms-media). Maks. 5 MB per unggahan. Seret file ke area di bawah atau klik untuk memilih.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.cms')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.cms')">Back</Link>
         </div>
       </div>
 

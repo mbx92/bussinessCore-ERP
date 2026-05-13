@@ -1,16 +1,17 @@
 <?php
 
 use App\Http\Controllers\CashflowController;
-use App\Http\Controllers\CrmActivityController;
-use App\Http\Controllers\ErpCalendarController;
-use App\Http\Controllers\CrmCustomerController;
-use App\Http\Controllers\CrmLeadController;
-use App\Http\Controllers\CrmPipelineController;
 use App\Http\Controllers\CashInController;
 use App\Http\Controllers\CashOutController;
 use App\Http\Controllers\CmsMediaController;
 use App\Http\Controllers\CmsModuleController;
+use App\Http\Controllers\CrmActivityController;
+use App\Http\Controllers\CrmCustomerController;
+use App\Http\Controllers\CrmLeadController;
+use App\Http\Controllers\CrmPipelineController;
+use App\Http\Controllers\ERPAccountingCoaSettingsController;
 use App\Http\Controllers\ERPAdministrationMasterDataController;
+use App\Http\Controllers\ErpCalendarController;
 use App\Http\Controllers\ErpChatbotController;
 use App\Http\Controllers\ERPInventoryController;
 use App\Http\Controllers\ERPInventoryMasterDataController;
@@ -19,7 +20,6 @@ use App\Http\Controllers\ERPModuleController;
 use App\Http\Controllers\ERPPurchasingController;
 use App\Http\Controllers\ERPReportingController;
 use App\Http\Controllers\ERPSalesController;
-use App\Http\Controllers\ERPAccountingCoaSettingsController;
 use App\Http\Controllers\ErpSystemLogController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\HREmployeeController;
@@ -39,6 +39,7 @@ use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TeamDistributionController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserRolePermissionController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -47,6 +48,7 @@ Route::get('/storage/{path}', function (string $path) {
     if (! $disk->exists($path)) {
         abort(404);
     }
+
     return response()->file($disk->path($path));
 })->where('path', '.*')->name('storage.serve');
 
@@ -135,7 +137,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('erp/inventory/warehouses/{warehouse}', [ERPInventoryMasterDataController::class, 'updateWarehouse'])->name('erp.inventory.warehouses.update');
         Route::get('erp/inventory/uoms', [ERPInventoryMasterDataController::class, 'uoms'])->name('erp.inventory.uoms');
         Route::post('erp/inventory/uoms', [ERPInventoryMasterDataController::class, 'storeUom'])->name('erp.inventory.uoms.store');
+        Route::patch('erp/inventory/uoms/{uom}', [ERPInventoryMasterDataController::class, 'updateUom'])->name('erp.inventory.uoms.update');
+        Route::delete('erp/inventory/uoms/{uom}', [ERPInventoryMasterDataController::class, 'destroyUom'])->name('erp.inventory.uoms.destroy');
         Route::post('erp/inventory/uom-conversions', [ERPInventoryMasterDataController::class, 'storeConversion'])->name('erp.inventory.uom-conversions.store');
+        Route::patch('erp/inventory/uom-conversions/{uomConversion}', [ERPInventoryMasterDataController::class, 'updateConversion'])->name('erp.inventory.uom-conversions.update');
+        Route::delete('erp/inventory/uom-conversions/{uomConversion}', [ERPInventoryMasterDataController::class, 'destroyConversion'])->name('erp.inventory.uom-conversions.destroy');
         Route::get('erp/inventory/stock-management', [ERPInventoryController::class, 'stockManagement'])->name('erp.inventory.stock-management');
         Route::put('erp/inventory/stock-management/{masterProduct}', [ERPInventoryController::class, 'updateStock'])->name('erp.inventory.stock-management.update');
         Route::get('erp/inventory/stock-opname', [ERPInventoryController::class, 'stockOpname'])->name('erp.inventory.stock-opname');
@@ -251,7 +257,10 @@ Route::middleware('auth')->group(function () {
 
     // User Management (Admin only)
     Route::middleware('role:admin')->group(function () {
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
+        Route::get('users/accounts', [UserController::class, 'index'])->name('users.accounts');
+        Route::get('users/roles-permissions', [UserRolePermissionController::class, 'index'])->name('users.roles-permissions');
+        Route::get('users', [UserController::class, 'workspace'])->name('users.index');
+        Route::patch('users/roles-permissions/{role}', [UserRolePermissionController::class, 'update'])->name('users.roles-permissions.update');
         Route::post('users', [UserController::class, 'store'])->name('users.store');
         Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');

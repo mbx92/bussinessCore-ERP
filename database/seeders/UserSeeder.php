@@ -32,12 +32,32 @@ class UserSeeder extends Seeder
             Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
         }
 
+        $menuPermissionNames = collect(config('erp_menu_permissions', []))->pluck('name')->all();
+        foreach ($menuPermissionNames as $menuName) {
+            Permission::firstOrCreate(['name' => $menuName, 'guard_name' => 'web']);
+        }
+
         Role::findByName('admin')->givePermissionTo($permissions);
         Role::findByName('manajer')->givePermissionTo([
             'erp.reporting.view',
             'erp.project.manage',
             'erp.sales.manage',
         ]);
+
+        $adminRole = Role::findByName('admin');
+        $adminRole->givePermissionTo($menuPermissionNames);
+
+        $manajerMenu = array_values(array_filter(
+            $menuPermissionNames,
+            fn (string $n) => $n === 'menu.dashboard'
+                || str_starts_with($n, 'menu.erp.')
+                || $n === 'menu.personal'
+        ));
+        Role::findByName('manajer')->givePermissionTo($manajerMenu);
+
+        foreach (['finance', 'sales', 'purchasing', 'inventory', 'hr', 'project', 'anggota'] as $r) {
+            Role::findByName($r)->givePermissionTo(['menu.dashboard']);
+        }
         Role::findByName('finance')->givePermissionTo([
             'erp.accounting.post-journal',
             'erp.reporting.view',

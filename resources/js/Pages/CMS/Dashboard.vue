@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 import { Bar, Doughnut, Line } from 'vue-chartjs';
 import {
@@ -159,14 +160,18 @@ const barOptions = {
   <Head title="Website CMS" />
   <AppLayout>
     <div class="space-y-6">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Website CMS</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Dashboard konten</h1>
-            <p class="mt-2 text-sm text-base-content/70">Landing publik, halaman per domain, dan perpustakaan media.</p>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Website CMS</p>
+              <h1 class="ocn-panel__title mt-1">Dashboard konten</h1>
+              <p class="ocn-panel__desc mt-1">Landing publik, halaman per domain, dan perpustakaan media.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Administration</Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Administration</Link>
         </div>
       </div>
 
@@ -190,13 +195,16 @@ const barOptions = {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 class="text-lg font-semibold tracking-tight">Statistik kunjungan</h2>
-        <p class="mt-1 text-sm text-base-content/70">
-          Landing dicatat per permintaan ke domain aktif; akses panel CMS (halaman GET) dicatat untuk admin. Lokasi dari IP publik (opsional, bisa dimatikan lewat
-          <code class="rounded bg-base-200 px-1 text-xs">CMS_ACCESS_LOG_GEO_LOOKUP</code>).
-        </p>
-        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <h2 class="ocn-panel__title">Statistik kunjungan</h2>
+          <p class="ocn-panel__desc">
+            Landing dicatat per permintaan ke domain aktif; akses panel CMS (halaman GET) dicatat untuk admin. Lokasi dari IP publik (opsional, bisa dimatikan lewat
+            <code class="rounded bg-base-200 px-1 text-xs">CMS_ACCESS_LOG_GEO_LOOKUP</code>).
+          </p>
+        </div>
+        <div class="card-body space-y-8">
+        <div class="grid gap-4 sm:grid-cols-3">
           <div class="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
             <p class="text-xs font-semibold uppercase text-base-content/50">Landing (7 hari)</p>
             <p class="mt-1 text-2xl font-bold text-sky-600">{{ visitAnalytics?.summary?.landing_hits_7d ?? 0 }}</p>
@@ -232,12 +240,16 @@ const barOptions = {
             </div>
           </div>
         </div>
+        </div>
       </div>
 
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm overflow-x-auto">
-        <h2 class="text-lg font-semibold tracking-tight">Akses terbaru</h2>
-        <p class="mt-1 text-sm text-base-content/70">IP, lokasi perkiraan, perangkat, dan jalur.</p>
-        <table class="table table-sm mt-4">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <h2 class="ocn-panel__title">Akses terbaru</h2>
+          <p class="ocn-panel__desc">IP, lokasi perkiraan, perangkat, dan jalur.</p>
+        </div>
+        <div class="overflow-x-auto">
+        <table class="table table-sm">
           <thead>
             <tr class="text-xs uppercase text-base-content/50">
               <th>Waktu</th>
@@ -270,12 +282,13 @@ const barOptions = {
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="grid gap-4 md:grid-cols-2">
         <Link
           :href="route('erp.cms.sites')"
-          class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+          class="card border border-base-200 bg-base-100 p-6 shadow-sm transition hover:border-primary/30 hover:shadow-md"
         >
           <h2 class="text-lg font-semibold">Landing sites</h2>
           <p class="mt-2 text-sm text-base-content/70">Kelola domain, layout, warehouse default, dan buka editor konten.</p>
@@ -283,7 +296,7 @@ const barOptions = {
         </Link>
         <Link
           :href="route('erp.cms.media')"
-          class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-primary/30 hover:shadow-md"
+          class="card border border-base-200 bg-base-100 p-6 shadow-sm transition hover:border-primary/30 hover:shadow-md"
         >
           <h2 class="text-lg font-semibold">Media library</h2>
           <p class="mt-2 text-sm text-base-content/70">Unggah gambar/PDF untuk dipakai di landing dan materi promosi.</p>

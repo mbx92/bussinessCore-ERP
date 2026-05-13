@@ -4,6 +4,7 @@ import CurrencyInput from '@/Components/CurrencyInput.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
@@ -169,16 +170,25 @@ const confirmDestroyEntry = () => {
   <Head title="Accounting - Cashflow" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">Cashflow</h1>
-          <div class="flex items-center gap-2">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Cashflow</h1>
+              <p class="ocn-panel__desc mt-1">Kas masuk dan kas keluar dalam satu tabel interaktif.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2">
             <button class="btn btn-primary btn-sm" @click="openAddModal">+ Input Transaksi</button>
-            <Link class="btn btn-ghost btn-sm" :href="route('erp.accounting')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.accounting')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">Kas masuk dan kas keluar dalam satu tabel interaktif.</p>
       </div>
 
       <div class="grid gap-3 md:grid-cols-3">

@@ -4,6 +4,7 @@ import StatusBadge from '@/Components/StatusBadge.vue';
 import CurrencyInput from '@/Components/CurrencyInput.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
@@ -340,25 +341,32 @@ const deleteProject = () => {
     <AppLayout>
         <div class="space-y-5">
             <!-- Header -->
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
-                        <h1 class="mt-2 text-3xl font-bold tracking-tight">{{ project.name }}</h1>
-                        <p class="text-base-content/60">{{ project.client_name }}</p>
-                        <p class="mt-1 text-sm text-base-content/70">Pantau progres project, keuangan, material, tim, dan task dalam satu halaman.</p>
+            <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Projects Workspace</p>
+              <h1 class="ocn-panel__title mt-1">{{ project.name }}</h1>
+              <p class="text-sm text-base-content/60 mt-1">{{ project.client_name }}</p>
+                        <p class="ocn-panel__desc mt-1">Pantau progres project, keuangan, material, tim, dan task dalam satu halaman.</p>
                         <span class="badge badge-ghost badge-sm mt-1">{{ projectTypeLabel(project.project_type) }}</span>
-                    </div>
-                    <div class="flex flex-wrap justify-end gap-2">
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex flex-wrap justify-end gap-2">
                         <StatusBadge :status="project.status" />
                         <button v-if="canMoveToBerjalan" class="btn btn-success btn-sm" @click="openStartStatusModal">Mulai Project</button>
                         <button v-if="canMoveToSelesai" class="btn btn-primary btn-sm" @click="openFinishStatusModal">Selesaikan Project</button>
                         <Link :href="route('projects.edit', project.id)" class="btn btn-outline btn-sm">Edit</Link>
                         <button class="btn btn-error btn-outline btn-sm" onclick="document.getElementById('modal-delete-project').showModal()">Hapus</button>
-                        <Link class="btn btn-ghost btn-sm" :href="route('projects.index')">Back</Link>
+                        <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('projects.index')">
+                      <ArrowLeftIcon class="h-4 w-4" />
+                      Back
+                    </Link>
                     </div>
-                </div>
             </div>
+          </div>
+        </div>
+      </div>
 
             <!-- Ringkasan keuangan (panel kontras, bukan stats/base-100 halaman) -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

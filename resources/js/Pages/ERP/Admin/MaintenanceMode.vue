@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 
 const props = defineProps({
@@ -46,23 +47,28 @@ const labelFor = (key) => props.moduleLabels?.[key] ?? key;
   <Head title="Administration - Maintenance mode" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Maintenance mode</h1>
-            <p class="mt-2 text-sm text-base-content/70">
-              <strong>Global</strong> memblokir semua rute bisnis (ERP, projects, kas, laporan, dll.) kecuali role <strong>admin</strong>.
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Maintenance mode</h1>
+              <p class="ocn-panel__desc mt-1"><strong>Global</strong> memblokir semua rute bisnis (ERP, projects, kas, laporan, dll.) kecuali role <strong>admin</strong>.
               <strong>Per modul</strong> hanya memblokir area yang dipetakan ke modul tersebut. Halaman ini selalu bisa diakses admin.
             </p>
             <p class="mt-2 text-xs text-base-content/60">
               Untuk pemeliharaan server penuh (termasuk login), gunakan juga <code class="rounded bg-base-200 px-1">php artisan down</code> di server.
             </p>
             <p class="mt-2 text-xs text-amber-800/90 dark:text-amber-200/90">
-              Uji per modul dengan akun <strong>bukan admin</strong> (mis. manajer): role admin tidak akan melihat halaman maintenance.
-            </p>
+              Uji per modul dengan akun <strong>bukan admin</strong> (mis. manajer): role admin tidak akan melihat halaman maintenance.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.administration')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Back</Link>
         </div>
       </div>
 

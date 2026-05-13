@@ -4,7 +4,8 @@ import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
-import { ArrowDownTrayIcon } from '@heroicons/vue/24/outline';
+import {ArrowLeftIcon,
+  ArrowDownTrayIcon} from '@heroicons/vue/24/outline';
 
 const props = defineProps({ members: Array, distributions: Array, totalPay: Number, filters: Object, years: Array });
 const { format } = useCurrency();
@@ -23,18 +24,25 @@ const exportExcel = () => window.location.href = route('export.member-payments',
   <Head title="Laporan - Pembayaran Anggota" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Laporan Pembayaran Anggota</h1>
-            <p class="mt-2 text-sm text-base-content/70">Distribusi pembayaran anggota per project sesuai filter anggota dan tahun.</p>
-          </div>
-          <div class="flex items-center gap-2">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Laporan Pembayaran Anggota</h1>
+              <p class="ocn-panel__desc mt-1">Distribusi pembayaran anggota per project sesuai filter anggota dan tahun.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2">
             <button class="btn btn-success btn-sm gap-2" @click="exportExcel">
               <ArrowDownTrayIcon class="h-4 w-4" /> Export Excel
             </button>
-            <Link class="btn btn-ghost btn-sm" :href="route('erp.accounting.payments')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.accounting.payments')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
       </div>

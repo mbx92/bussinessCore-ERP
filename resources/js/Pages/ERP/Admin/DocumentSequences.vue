@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { ref, watch, nextTick } from 'vue';
 
 const props = defineProps({
@@ -112,14 +113,21 @@ const onPerPage = (n) => {
   <Head title="Administration - Setting Nomor Dokumen" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Setting Nomor Dokumen</h1>
-            <p class="mt-2 text-sm text-base-content/70">Atur prefix, padding, dan sequence agar nomor dokumen formal dan konsisten.</p>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Setting Nomor Dokumen</h1>
+              <p class="ocn-panel__desc mt-1">Atur prefix, padding, dan sequence agar nomor dokumen formal dan konsisten.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.administration')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Back</Link>
         </div>
       </div>
 

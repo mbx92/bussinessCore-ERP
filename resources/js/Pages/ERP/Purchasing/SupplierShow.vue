@@ -19,14 +19,19 @@ const goBack = () => {
   <Head :title="`Supplier — ${detail.name}`" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing · Supplier</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">{{ detail.name }}</h1>
-            <p class="mt-1 font-mono text-sm text-base-content/70">{{ detail.code }}</p>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing · Supplier</p>
+              <h1 class="ocn-panel__title mt-1">{{ detail.name }}</h1>
+              <p class="mt-1 font-mono text-sm text-base-content/70">{{ detail.code }}</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <button type="button" class="btn btn-ghost btn-sm shrink-0 gap-1.5" @click="goBack"><ArrowLeftIcon class="h-4 w-4" />
+            Back</button>
+            </div>
           </div>
-          <button type="button" class="btn btn-ghost btn-sm" @click="goBack">Back</button>
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, watch } from 'vue';
 
 const props = defineProps({
@@ -67,15 +68,22 @@ const openAddModal = () => {
   <Head title="Purchasing - Manajemen Supplier" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing Workspace</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">Manajemen Supplier</h1>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.purchasing')">Back</Link>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Manajemen Supplier</h1>
+              <p class="ocn-panel__desc mt-1">Klik baris untuk detail dan langkah berikutnya. Data supplier untuk proses pembelian dan evaluasi lead time.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.purchasing')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
+          </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">
-          Klik baris untuk detail dan langkah berikutnya. Data supplier untuk proses pembelian dan evaluasi lead time.
-        </p>
       </div>
 
       <div v-if="highlight" class="alert alert-info text-sm">

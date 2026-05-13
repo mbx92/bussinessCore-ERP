@@ -7,10 +7,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ErpSetting extends Model
 {
+    public const MODULE_MENU_LAYOUT_GRID = 'grid';
+    public const MODULE_MENU_LAYOUT_LIST = 'list';
+
     protected $fillable = [
         'app_name',
         'app_tagline',
         'app_logo_path',
+        'module_menu_layout',
         'thermal_printer_enabled',
         'thermal_printer_host',
         'thermal_printer_port',
@@ -63,6 +67,24 @@ class ErpSetting extends Model
     public function labelLanProfile(): BelongsTo
     {
         return $this->belongsTo(LabelProfile::class, 'label_lan_profile_id');
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function moduleMenuLayoutOptions(): array
+    {
+        return [
+            self::MODULE_MENU_LAYOUT_GRID,
+            self::MODULE_MENU_LAYOUT_LIST,
+        ];
+    }
+
+    public function resolvedModuleMenuLayout(): string
+    {
+        return in_array($this->module_menu_layout, self::moduleMenuLayoutOptions(), true)
+            ? $this->module_menu_layout
+            : self::MODULE_MENU_LAYOUT_GRID;
     }
 
     /**

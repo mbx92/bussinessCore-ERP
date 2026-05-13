@@ -1,6 +1,7 @@
 ﻿<script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   settings: Array,
@@ -74,20 +75,27 @@ const domainTitle = (domain) => (domain === 'cash_in' ? 'Kas Masuk' : 'Kas Kelua
   <Head title="Accounting - Pengaturan COA" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <h1 class="text-3xl font-bold tracking-tight">Pengaturan COA</h1>
-          <div class="flex items-center gap-2">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Pengaturan COA</h1>
+              <p class="ocn-panel__desc mt-1">Satu halaman untuk mengatur posting otomatis sistem dan mapping kategori cashflow. Setiap baris menjelaskan transaksi masuk ke akun mana dan mengambil nilai dari field apa.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2">
             <button class="btn btn-outline btn-sm" @click="openDefaultsModal">
               Terapkan Standar Akuntansi
             </button>
-            <Link class="btn btn-ghost btn-sm" :href="route('erp.accounting')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.accounting')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
-        <p class="mt-2 text-sm text-base-content/70">
-          Satu halaman untuk mengatur posting otomatis sistem dan mapping kategori cashflow. Setiap baris menjelaskan transaksi masuk ke akun mana dan mengambil nilai dari field apa.
-        </p>
       </div>
 
       <div class="ocn-panel">

@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 import { Line } from 'vue-chartjs';
 import {
@@ -81,23 +82,30 @@ const refresh = () => {
   <Head title="Administration - Monitoring server" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
-        <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Monitoring server</h1>
-            <p class="mt-2 text-sm text-base-content/70">
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Monitoring server</h1>
+              <p class="ocn-panel__desc mt-1">
               Metrik diambil di sisi <strong>server PHP</strong> saat halaman dimuat: waktu kueri ke basis data, perkiraan ukuran DB, koneksi TCP ke host DB (jika bukan SQLite), dan satu permintaan HTTP keluar untuk mengukur jaringan keluar.
             </p>
-            <p class="mt-1 text-xs text-base-content/60">
+            <p class="text-xs text-base-content/60 mt-1">
               Diukur: {{ metrics?.collected_at_display ?? metrics?.collected_at ?? '—' }}
               <span v-if="metrics?.timezone">({{ metrics.timezone }} {{ metrics?.timezone_offset ?? '' }})</span>
               <span v-if="metrics?.collected_at_human">· {{ metrics.collected_at_human }}</span>
             </p>
-          </div>
-          <div class="flex flex-wrap gap-2">
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <div class="flex flex-wrap gap-2">
             <button type="button" class="btn btn-outline btn-sm" @click="refresh">Muat ulang metrik</button>
-            <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Back</Link>
+            <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.administration')">
+            <ArrowLeftIcon class="h-4 w-4" />
+            Back
+          </Link>
+          </div>
+            </div>
           </div>
         </div>
       </div>

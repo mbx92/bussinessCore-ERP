@@ -2,12 +2,11 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, reactive, watch } from 'vue';
-import {
+import {ArrowLeftIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
-  ServerStackIcon,
-} from '@heroicons/vue/24/outline';
+  ServerStackIcon,} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   activeTab: String,
@@ -134,16 +133,21 @@ async function runAllSeeders() {
   <Head title="Administration - Impor & Seeder Data" />
   <AppLayout>
     <div class="space-y-5">
-      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
-        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 class="text-3xl font-bold tracking-tight">Impor & Seeder Data</h1>
-            <p class="mt-2 text-sm text-base-content/70">
-              Impor data dari file Excel atau jalankan database seeder untuk mengisi data master awal.
-            </p>
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Administration Workspace</p>
+              <h1 class="ocn-panel__title mt-1">Impor & Seeder Data</h1>
+              <p class="ocn-panel__desc mt-1">Impor data dari file Excel atau jalankan database seeder untuk mengisi data master awal.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.administration')">
+              <ArrowLeftIcon class="h-4 w-4" />
+              Back
+            </Link>
+            </div>
           </div>
-          <Link class="btn btn-ghost btn-sm" :href="route('erp.administration')">Back</Link>
         </div>
       </div>
 
