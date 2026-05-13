@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { computed, ref, reactive, watch } from 'vue';
+import { computed, nextTick, ref, reactive, watch } from 'vue';
 import {ArrowLeftIcon,
   ArrowPathIcon,
   CheckCircleIcon,
@@ -40,6 +40,17 @@ const projectFileInput = ref(null);
 const productForm = useForm({ file: null });
 const projectForm = useForm({ file: null });
 const clearWarehouseForm = useForm({ warehouse_id: '' });
+
+const clearWarehouseDialogEl = ref(null);
+const clearWarehouseDeletePhrase = ref('');
+const clearWarehousePhraseInput = ref(null);
+
+const warehouseClearTargetLabel = computed(() => {
+  const w = props.warehouses.find((x) => String(x.id) === String(clearWarehouseForm.warehouse_id));
+  return w ? `${w.name} (${w.code})` : '';
+});
+
+const canConfirmWarehouseClear = computed(() => clearWarehouseDeletePhrase.value.trim() === 'DELETE');
 
 const flash = computed(() => page.props.flash ?? {});
 const importErrors = computed(() => flash.value?.import_errors ?? []);
@@ -85,16 +96,33 @@ function submitProjects() {
   });
 }
 
-function submitClearWarehouseProducts() {
-  if (!clearWarehouseForm.warehouse_id) return;
-  const w = props.warehouses.find((x) => String(x.id) === String(clearWarehouseForm.warehouse_id));
-  const label = w ? `${w.name} (${w.code})` : 'gudang ini';
-  const ok = window.confirm(
-    `Hapus semua penempatan produk di ${label}? Stok di gudang ini boleh tidak nol — data penempatan (dan produk master yang hanya di sini) akan dihapus sesuai aturan relasi. Produk yang masih ada di gudang lain tetap ada, hanya baris gudang ini yang dihapus.`,
-  );
-  if (!ok) return;
+function onClearWarehouseModalClose() {
+  clearWarehouseDeletePhrase.value = '';
+}
+
+function closeClearWarehouseModal() {
+  clearWarehouseDialogEl.value?.close();
+}
+
+async function openClearWarehouseModal() {
+  if (!clearWarehouseForm.warehouse_id) {
+    return;
+  }
+  clearWarehouseDeletePhrase.value = '';
+  clearWarehouseDialogEl.value?.showModal();
+  await nextTick();
+  clearWarehousePhraseInput.value?.focus();
+}
+
+function submitClearWarehouseProductsFromModal() {
+  if (!clearWarehouseForm.warehouse_id || !canConfirmWarehouseClear.value) {
+    return;
+  }
   clearWarehouseForm.post(route('erp.admin.data-import.warehouse-clear-products'), {
     preserveScroll: true,
+    onSuccess: () => {
+      closeClearWarehouseModal();
+    },
   });
 }
 
@@ -280,7 +308,7 @@ async function runAllSeeders() {
                 type="button"
                 class="btn btn-outline btn-error btn-sm"
                 :disabled="!clearWarehouseForm.warehouse_id || clearWarehouseForm.processing"
-                @click="submitClearWarehouseProducts"
+                @click="openClearWarehouseModal"
               >
                 {{ clearWarehouseForm.processing ? 'Memproses…' : 'Kosongkan produk di gudang' }}
               </button>
@@ -434,6 +462,58 @@ async function runAllSeeders() {
           </div>
         </div>
       </div>
+
+      <dialog
+        ref="clearWarehouseDialogEl"
+        class="modal"
+        @close="onClearWarehouseModalClose"
+      >
+        <div class="modal-box max-w-lg">
+          <h3 class="font-bold text-lg text-error">Konfirmasi kosongkan gudang</h3>
+          <p class="mt-2 text-sm text-base-content/80">
+            Anda akan menghapus semua penempatan produk di
+            <strong class="text-base-content">{{ warehouseClearTargetLabel }}</strong>.
+            Stok di gudang ini boleh tidak nol. Produk yang hanya terdaftar di gudang ini dapat ikut terhapus dari master
+            jika tidak ada relasi pembelian, penerimaan, project, POS, atau riwayat stok.
+          </p>
+          <div class="alert alert-warning mt-3 text-sm">
+            <span>Tindakan ini tidak dapat dibatalkan dari layar ini. Pastikan Anda memilih gudang yang benar.</span>
+          </div>
+          <div class="mt-4 space-y-2">
+            <label class="label py-0" for="clear-warehouse-delete-phrase">
+              <span class="label-text font-medium">Ketik <kbd class="kbd kbd-sm font-mono">DELETE</kbd> untuk melanjutkan</span>
+            </label>
+            <input
+              id="clear-warehouse-delete-phrase"
+              ref="clearWarehousePhraseInput"
+              v-model="clearWarehouseDeletePhrase"
+              type="text"
+              class="input input-bordered w-full font-mono text-sm"
+              placeholder="DELETE"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              @keydown.enter.prevent="canConfirmWarehouseClear && submitClearWarehouseProductsFromModal()"
+            >
+          </div>
+          <div class="modal-action mt-4 flex w-full flex-wrap items-center justify-end gap-2">
+            <button type="button" class="btn btn-ghost btn-sm" @click="closeClearWarehouseModal">
+              Batal
+            </button>
+            <button
+              type="button"
+              class="btn btn-error btn-sm"
+              :disabled="!canConfirmWarehouseClear || clearWarehouseForm.processing"
+              @click="submitClearWarehouseProductsFromModal"
+            >
+              {{ clearWarehouseForm.processing ? 'Memproses…' : 'Hapus penempatan & produk (sesuai aturan)' }}
+            </button>
+          </div>
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button type="submit" aria-label="Tutup">close</button>
+        </form>
+      </dialog>
 
       <div v-if="flash?.message" class="alert text-sm" :class="flash.type === 'error' ? 'alert-error' : flash.type === 'warning' ? 'alert-warning' : 'alert-success'">
         {{ flash.message }}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\ERP\Accounting\Models\Account;
 use App\ERP\Accounting\Models\JournalEntry;
 use App\ERP\Accounting\Services\CoaSettingService;
 use App\ERP\Accounting\Services\GlPostingService;
@@ -114,7 +115,7 @@ class ERPSalesController extends Controller
     public function posTransactions(Request $request): Response
     {
         $query = PosSale::query()
-            ->with(['paymentMethod:id,name', 'soldBy:id,name', 'items:id,pos_sale_id,qty,base_qty_used', 'additionalCharges:id,pos_sale_id,charge_name,amount'])
+            ->with(['paymentMethod:id,name', 'soldBy:id,name', 'items:id,pos_sale_id'])
             ->latest('sold_at')
             ->when($request->filled('q'), function ($q) use ($request): void {
                 $term = $request->string('q')->toString();
@@ -134,12 +135,6 @@ class ERPSalesController extends Controller
                 'sales_channel' => $this->priceChannelLabel($sale->sales_channel ?: 'retail'),
                 'sold_at' => $sale->sold_at?->format('Y-m-d H:i:s'),
                 'items_count' => $sale->items->count(),
-                'total_qty' => (float) $sale->items->sum('qty'),
-                'base_qty_used' => (int) $sale->items->sum('base_qty_used'),
-                'additional_fee' => (float) $sale->additional_fee,
-                'additional_charge_labels' => $sale->additionalCharges->map(
-                    fn ($charge) => $charge->charge_name.' ('.number_format((float) $charge->amount, 0, ',', '.').')'
-                )->implode(', '),
                 'grand_total' => (float) $sale->grand_total,
                 'payment_method' => $sale->paymentMethod?->name,
                 'cashier' => $sale->soldBy?->name,
@@ -170,6 +165,7 @@ class ERPSalesController extends Controller
                 'gross_total' => (float) $posSale->gross_total,
                 'discount_total' => (float) $posSale->discount_total,
                 'additional_fee' => (float) $posSale->additional_fee,
+                'sales_channel_admin_fee' => (float) ($posSale->sales_channel_admin_fee ?? 0),
                 'grand_total' => (float) $posSale->grand_total,
                 'cash_paid' => (float) $posSale->cash_paid,
                 'change_amount' => (float) $posSale->change_amount,
@@ -177,6 +173,7 @@ class ERPSalesController extends Controller
                     'id' => $charge->id,
                     'charge_name' => $charge->charge_name,
                     'amount' => (float) $charge->amount,
+                    'kind' => $charge->kind ?? 'add_to_total',
                 ]),
                 'items' => $posSale->items->map(fn ($item) => [
                     'id' => $item->id,
@@ -265,18 +262,25 @@ class ERPSalesController extends Controller
             $cashAccount = $coa->resolveAccountByKey('pos_sale_cash_account', '1001');
             $revenueAccount = $coa->resolveAccountByKey('pos_sale_revenue_account', '4002');
             $additionalAccount = $coa->resolveAccountByKey('pos_sale_additional_income_account', '4004');
+            $adminFee = max((float) ($posSale->sales_channel_admin_fee ?? 0), 0);
+            $channelAdminExpenseAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_expense', '5016') : null;
+            $channelAdminPayableAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_payable', '2090') : null;
 
             $netSales = max(((float) $posSale->gross_total) - ((float) $posSale->discount_total), 0);
-            $additionalFee = max((float) ($posSale->additional_fee ?? 0), 0);
+            $additionalFeeAdd = max((float) ($posSale->additional_fee ?? 0), 0);
             $grandTotal = max((float) $posSale->grand_total, 0);
 
-            $lines = [
-                ['account_id' => $revenueAccount->id, 'debit' => $netSales, 'credit' => 0],
-            ];
-            if ($additionalFee > 0) {
-                $lines[] = ['account_id' => $additionalAccount->id, 'debit' => $additionalFee, 'credit' => 0];
-            }
-            $lines[] = ['account_id' => $cashAccount->id, 'debit' => 0, 'credit' => $grandTotal];
+            $lines = $this->buildPosSaleCashReceiptRefundJournalLines(
+                grandTotal: $grandTotal,
+                netSales: $netSales,
+                additionalFeeAddToTotal: $additionalFeeAdd,
+                salesChannelAdminFee: $adminFee,
+                cashAccount: $cashAccount,
+                revenueAccount: $revenueAccount,
+                additionalRevenueAccount: $additionalAccount,
+                channelAdminExpenseAccount: $channelAdminExpenseAccount,
+                channelAdminPayableAccount: $channelAdminPayableAccount,
+            );
 
             $this->glPostingService->post(
                 sourceModule: 'pos_sale_refund',
@@ -347,18 +351,26 @@ class ERPSalesController extends Controller
             $cashAccount = $coa->resolveAccountByKey('pos_sale_cash_account', '1001');
             $revenueAccount = $coa->resolveAccountByKey('pos_sale_revenue_account', '4002');
             $additionalAccount = $coa->resolveAccountByKey('pos_sale_additional_income_account', '4004');
+            $adminFee = max((float) ($posSale->sales_channel_admin_fee ?? 0), 0);
+            $channelAdminExpenseAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_expense', '5016') : null;
+            $channelAdminPayableAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_payable', '2090') : null;
 
             $netSales = max(((float) $posSale->gross_total) - ((float) $posSale->discount_total), 0);
-            $additionalFee = max((float) ($posSale->additional_fee ?? 0), 0);
+            $additionalFeeAdd = max((float) ($posSale->additional_fee ?? 0), 0);
             $grandTotal = max((float) $posSale->grand_total, 0);
 
-            $lines = [
-                ['account_id' => $cashAccount->id, 'debit' => $grandTotal, 'credit' => 0],
-                ['account_id' => $revenueAccount->id, 'debit' => 0, 'credit' => $netSales],
-            ];
-            if ($additionalFee > 0) {
-                $lines[] = ['account_id' => $additionalAccount->id, 'debit' => 0, 'credit' => $additionalFee];
-            }
+            $lines = $this->buildPosSaleCashReceiptJournalLines(
+                grandTotal: $grandTotal,
+                netSales: $netSales,
+                additionalFeeAddToTotal: $additionalFeeAdd,
+                salesChannelAdminFee: $adminFee,
+                cashAccount: $cashAccount,
+                revenueAccount: $revenueAccount,
+                additionalRevenueAccount: $additionalAccount,
+                channelAdminExpenseAccount: $channelAdminExpenseAccount,
+                channelAdminPayableAccount: $channelAdminPayableAccount,
+            );
+
             $this->glPostingService->post(
                 sourceModule: 'pos_sale_reopen',
                 sourceReference: $posSale->number,
@@ -380,6 +392,7 @@ class ERPSalesController extends Controller
             'additional_charges' => 'nullable|array',
             'additional_charges.*.name' => 'required|string|max:120',
             'additional_charges.*.amount' => 'required|numeric|min:0.01',
+            'additional_charges.*.kind' => 'nullable|string|in:add_to_total,journal_admin',
             'items' => 'required|array|min:1',
             'items.*.master_product_id' => 'required|integer|exists:master_products,id',
             'items.*.qty' => 'required|numeric|gt:0',
@@ -401,13 +414,22 @@ class ERPSalesController extends Controller
             })
             ->all();
         $additionalCharges = collect($validated['additional_charges'] ?? [])
-            ->map(fn (array $charge) => [
-                'charge_name' => trim((string) $charge['name']),
-                'amount' => (float) $charge['amount'],
-            ])
+            ->map(function (array $charge): array {
+                $kind = $charge['kind'] ?? 'add_to_total';
+                if (! in_array($kind, ['add_to_total', 'journal_admin'], true)) {
+                    $kind = 'add_to_total';
+                }
+
+                return [
+                    'charge_name' => trim((string) $charge['name']),
+                    'amount' => (float) $charge['amount'],
+                    'kind' => $kind,
+                ];
+            })
             ->filter(fn (array $charge) => $charge['charge_name'] !== '' && $charge['amount'] > 0)
             ->values();
-        $additionalFee = (float) $additionalCharges->sum('amount');
+        $additionalFeeAdd = (float) $additionalCharges->where('kind', 'add_to_total')->sum('amount');
+        $adminFee = (float) $additionalCharges->where('kind', 'journal_admin')->sum('amount');
 
         $grossTotal = collect($items)->sum(fn ($item) => (float) $item['unit_price'] * (float) $item['qty']);
         $discountTotal = collect($items)->sum(function ($item): float {
@@ -416,7 +438,12 @@ class ERPSalesController extends Controller
             return $gross * (((float) ($item['discount_percent'] ?? 0)) / 100);
         });
         $netSalesTotal = max($grossTotal - $discountTotal, 0);
-        $grandTotal = max($netSalesTotal + $additionalFee, 0);
+        if ($adminFee > $netSalesTotal) {
+            throw ValidationException::withMessages([
+                'additional_charges' => 'Total biaya admin channel tidak boleh melebihi nilai penjualan bersih.',
+            ]);
+        }
+        $grandTotal = max($netSalesTotal + $additionalFeeAdd, 0);
         $cashPaid = (float) ($validated['cash_paid'] ?? 0);
 
         if ($paymentMethod->code === 'cash' && $cashPaid < $grandTotal) {
@@ -425,7 +452,7 @@ class ERPSalesController extends Controller
             ]);
         }
 
-        $checkoutResult = DB::transaction(function () use ($items, $grossTotal, $discountTotal, $additionalCharges, $additionalFee, $grandTotal, $cashPaid, $paymentMethod, $salesChannel): array {
+        $checkoutResult = DB::transaction(function () use ($items, $grossTotal, $discountTotal, $additionalCharges, $additionalFeeAdd, $adminFee, $grandTotal, $cashPaid, $paymentMethod, $salesChannel): array {
             $transactionNumber = $this->documentNumberService->next('sales', 'pos_sale', [
                 'prefix' => 'POS',
                 'padding_length' => 6,
@@ -437,7 +464,8 @@ class ERPSalesController extends Controller
                 'payment_method_id' => $paymentMethod->id,
                 'gross_total' => $grossTotal,
                 'discount_total' => $discountTotal,
-                'additional_fee' => $additionalFee,
+                'additional_fee' => $additionalFeeAdd,
+                'sales_channel_admin_fee' => $adminFee,
                 'grand_total' => $grandTotal,
                 'cash_paid' => $cashPaid,
                 'change_amount' => max($cashPaid - $grandTotal, 0),
@@ -520,15 +548,21 @@ class ERPSalesController extends Controller
             $cashAccount = $coa->resolveAccountByKey('pos_sale_cash_account', '1001');
             $revenueAccount = $coa->resolveAccountByKey('pos_sale_revenue_account', '4002');
             $additionalAccount = $coa->resolveAccountByKey('pos_sale_additional_income_account', '4004');
+            $channelAdminExpenseAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_expense', '5016') : null;
+            $channelAdminPayableAccount = $adminFee > 0 ? $coa->resolveAccountByKey('pos_sale_sales_channel_admin_payable', '2090') : null;
 
             $netSales = max($grossTotal - $discountTotal, 0);
-            $lines = [
-                ['account_id' => $cashAccount->id, 'debit' => $grandTotal, 'credit' => 0],
-                ['account_id' => $revenueAccount->id, 'debit' => 0, 'credit' => $netSales],
-            ];
-            if ($additionalFee > 0) {
-                $lines[] = ['account_id' => $additionalAccount->id, 'debit' => 0, 'credit' => $additionalFee];
-            }
+            $lines = $this->buildPosSaleCashReceiptJournalLines(
+                grandTotal: $grandTotal,
+                netSales: $netSales,
+                additionalFeeAddToTotal: $additionalFeeAdd,
+                salesChannelAdminFee: $adminFee,
+                cashAccount: $cashAccount,
+                revenueAccount: $revenueAccount,
+                additionalRevenueAccount: $additionalAccount,
+                channelAdminExpenseAccount: $channelAdminExpenseAccount,
+                channelAdminPayableAccount: $channelAdminPayableAccount,
+            );
             $this->glPostingService->post(
                 sourceModule: 'pos_sale',
                 sourceReference: $transactionNumber,
@@ -672,10 +706,12 @@ class ERPSalesController extends Controller
                 'discount_percent' => (float) ($row->discount_percent ?? 0),
             ])->all(),
             additionalFee: number_format((float) ($sale->additional_fee ?? 0), 0, ',', '.'),
-            additionalCharges: $sale->additionalCharges->map(fn ($charge) => [
-                'name' => (string) $charge->charge_name,
-                'amount' => number_format((float) $charge->amount, 0, ',', '.'),
-            ])->all(),
+            additionalCharges: $sale->additionalCharges
+                ->filter(fn ($charge) => ($charge->kind ?? 'add_to_total') === 'add_to_total')
+                ->map(fn ($charge) => [
+                    'name' => (string) $charge->charge_name,
+                    'amount' => number_format((float) $charge->amount, 0, ',', '.'),
+                ])->all(),
         );
 
         $layout = [
@@ -782,6 +818,95 @@ class ERPSalesController extends Controller
             ['key' => 'marketplace', 'label' => 'Marketplace'],
             ['key' => 'online', 'label' => 'Online'],
         ];
+    }
+
+    /**
+     * Jurnal POS saat kas masuk: grand total = penjualan bersih + biaya lain yang ditagih.
+     * Biaya admin channel: debit beban + kredit hutang estimasi (tidak mengubah grand total / kas).
+     *
+     * @return array<int, array{account_id: int, debit: float, credit: float}>
+     */
+    private function buildPosSaleCashReceiptJournalLines(
+        float $grandTotal,
+        float $netSales,
+        float $additionalFeeAddToTotal,
+        float $salesChannelAdminFee,
+        Account $cashAccount,
+        Account $revenueAccount,
+        Account $additionalRevenueAccount,
+        ?Account $channelAdminExpenseAccount,
+        ?Account $channelAdminPayableAccount,
+    ): array {
+        $netSales = max($netSales, 0.0);
+        $admin = max($salesChannelAdminFee, 0.0);
+        $add = max($additionalFeeAddToTotal, 0.0);
+        $grand = max($grandTotal, 0.0);
+
+        if ($admin > $netSales + 1e-9) {
+            throw ValidationException::withMessages([
+                'additional_charges' => 'Total biaya admin channel tidak boleh melebihi nilai penjualan bersih.',
+            ]);
+        }
+
+        $lines = [
+            ['account_id' => $cashAccount->id, 'debit' => $grand, 'credit' => 0.0],
+            ['account_id' => $revenueAccount->id, 'debit' => 0.0, 'credit' => $netSales],
+        ];
+
+        if ($add > 0) {
+            $lines[] = ['account_id' => $additionalRevenueAccount->id, 'debit' => 0.0, 'credit' => $add];
+        }
+
+        if ($admin > 0) {
+            if ($channelAdminExpenseAccount === null || $channelAdminPayableAccount === null) {
+                throw new \InvalidArgumentException('Akun beban / hutang admin channel wajib ada jika ada biaya admin.');
+            }
+            $lines[] = ['account_id' => $channelAdminExpenseAccount->id, 'debit' => $admin, 'credit' => 0.0];
+            $lines[] = ['account_id' => $channelAdminPayableAccount->id, 'debit' => 0.0, 'credit' => $admin];
+        }
+
+        return $lines;
+    }
+
+    /**
+     * Kebalikan dari {@see buildPosSaleCashReceiptJournalLines} untuk refund POS.
+     *
+     * @return array<int, array{account_id: int, debit: float, credit: float}>
+     */
+    private function buildPosSaleCashReceiptRefundJournalLines(
+        float $grandTotal,
+        float $netSales,
+        float $additionalFeeAddToTotal,
+        float $salesChannelAdminFee,
+        Account $cashAccount,
+        Account $revenueAccount,
+        Account $additionalRevenueAccount,
+        ?Account $channelAdminExpenseAccount,
+        ?Account $channelAdminPayableAccount,
+    ): array {
+        $netSales = max($netSales, 0.0);
+        $admin = max($salesChannelAdminFee, 0.0);
+        $add = max($additionalFeeAddToTotal, 0.0);
+        $grand = max($grandTotal, 0.0);
+
+        $lines = [
+            ['account_id' => $cashAccount->id, 'debit' => 0.0, 'credit' => $grand],
+            ['account_id' => $revenueAccount->id, 'debit' => $netSales, 'credit' => 0.0],
+        ];
+
+        if ($add > 0) {
+            $lines[] = ['account_id' => $additionalRevenueAccount->id, 'debit' => $add, 'credit' => 0.0];
+        }
+
+        if ($admin > 0) {
+            if ($channelAdminExpenseAccount === null || $channelAdminPayableAccount === null) {
+                throw new \InvalidArgumentException('Akun beban / hutang admin channel wajib ada jika ada biaya admin.');
+            }
+            $lines[] = ['account_id' => $channelAdminExpenseAccount->id, 'debit' => 0.0, 'credit' => $admin];
+            $lines[] = ['account_id' => $channelAdminPayableAccount->id, 'debit' => $admin, 'credit' => 0.0];
+        }
+
+        return $lines;
     }
 
     private function authorizeHighPrivilege(Request $request): void

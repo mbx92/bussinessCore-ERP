@@ -733,6 +733,7 @@ class ERPPurchasingController extends Controller
 
                 $inventoryAccount = Account::query()->where('code', '1201')->firstOrFail();
                 $payableAccount = Account::query()->where('code', '2001')->firstOrFail();
+
                 $amount = (float) $receipt->purchaseOrder->total_amount;
 
                 $entry = $this->glPostingService->post(

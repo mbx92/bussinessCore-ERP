@@ -73,10 +73,10 @@ const categoryLabelMap = computed(() => {
 
 const defaultInCategory = computed(() => props.categoryOptions?.in?.[0]?.value ?? '');
 const defaultOutCategory = computed(() => props.categoryOptions?.out?.[0]?.value ?? '');
+const cashAccountLabel = (type) => (type === 'in' ? 'Tujuan Dana Kas/Bank' : 'Sumber Dana Kas/Bank');
 
 const form = useForm({
   type: 'in',
-  project_id: '',
   cash_account_id: '',
   payment_method_id: '',
   category: defaultInCategory.value,
@@ -108,7 +108,6 @@ const openAddModal = () => {
 
   form.reset();
   form.type = 'in';
-  form.project_id = '';
   form.cash_account_id = props.cashAccounts?.[0]?.id ?? '';
   form.payment_method_id = '';
   form.category = defaultInCategory.value;
@@ -130,7 +129,6 @@ const submitEntry = () => {
 const editForm = useForm({
   id: '',
   type: 'in',
-  project_id: '',
   cash_account_id: '',
   payment_method_id: '',
   category: '',
@@ -157,7 +155,6 @@ const openEditModal = (entry) => {
 
   editForm.id = entry.id;
   editForm.type = entry.type;
-  editForm.project_id = entry.project_id || '';
   editForm.cash_account_id = entry.cash_account_id || props.cashAccounts?.[0]?.id || '';
   editForm.payment_method_id = entry.payment_method_id || '';
   editForm.category = entry.category;
@@ -360,15 +357,7 @@ const confirmDestroyEntry = () => {
             </select>
           </div>
           <div>
-            <label class="label"><span class="label-text">Project <span class="text-error">*</span></span></label>
-            <select v-model="form.project_id" class="select select-bordered w-full">
-              <option value="">Operasional umum (tanpa project)</option>
-              <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
-            <p v-if="form.errors.project_id" class="text-error text-xs mt-1">{{ form.errors.project_id }}</p>
-          </div>
-          <div>
-            <label class="label"><span class="label-text">Sumber Dana Kas/Bank <span class="text-error">*</span></span></label>
+            <label class="label"><span class="label-text">{{ cashAccountLabel(form.type) }} <span class="text-error">*</span></span></label>
             <select v-model="form.cash_account_id" class="select select-bordered w-full">
               <option value="" disabled>-- Pilih Akun Kas/Bank --</option>
               <option v-for="acc in cashAccounts" :key="acc.id" :value="acc.id">{{ acc.code }} - {{ acc.name }}</option>
@@ -461,14 +450,7 @@ const confirmDestroyEntry = () => {
             </select>
           </div>
           <div>
-            <label class="label"><span class="label-text">Project</span></label>
-            <select v-model="editForm.project_id" class="select select-bordered w-full">
-              <option value="">Operasional umum (tanpa project)</option>
-              <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="label"><span class="label-text">Sumber Dana Kas/Bank</span></label>
+            <label class="label"><span class="label-text">{{ cashAccountLabel(editForm.type) }}</span></label>
             <select v-model="editForm.cash_account_id" class="select select-bordered w-full">
               <option v-for="acc in cashAccounts" :key="acc.id" :value="acc.id">{{ acc.code }} - {{ acc.name }}</option>
             </select>

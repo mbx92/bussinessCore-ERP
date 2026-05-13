@@ -73,14 +73,14 @@ class ReportController extends Controller
             'netProfit'          => $totalIn - $totalOut,
             'expenseByCategory'  => $expenseByCategory,
             'cashIns'            => $cashIns->map(fn ($c) => [
-                'project_name' => $c->project->name,
+                'project_name' => $c->project?->name ?? 'Manual / Umum',
                 'category'     => $c->category,
                 'amount'       => (float) $c->amount,
                 'date'         => $c->date->format('Y-m-d'),
                 'note'         => $c->note,
             ]),
             'cashOuts'           => $cashOuts->map(fn ($c) => [
-                'project_name'   => $c->project->name,
+                'project_name'   => $c->project?->name ?? 'Operasional Umum',
                 'category'       => $c->category,
                 'amount'         => (float) $c->amount,
                 'date'           => $c->date->format('Y-m-d'),

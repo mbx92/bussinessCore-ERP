@@ -37,7 +37,7 @@ class CashInController extends Controller
             ->through(fn ($c) => [
                 'id' => $c->id,
                 'project_id' => $c->project_id,
-                'project_name' => $c->project->name,
+                'project_name' => $c->project?->name ?? 'Manual / Umum',
                 'payment_method_id' => $c->payment_method_id,
                 'payment_method_name' => $c->paymentMethod?->name,
                 'cash_account_id' => $c->cash_account_id,

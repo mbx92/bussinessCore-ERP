@@ -23,7 +23,9 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        DB::statement("ALTER TABLE projects ADD CONSTRAINT chk_projects_status CHECK (status IN ('negosiasi','berjalan','selesai','dibatalkan'))");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE projects ADD CONSTRAINT chk_projects_status CHECK (status IN ('negosiasi','berjalan','selesai','dibatalkan'))");
+        }
     }
 
     public function down(): void

@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
   detail: Object,
@@ -43,11 +44,11 @@ const goBack = () => {
               <p class="ocn-panel__desc mt-1">Tanggal terima {{ detail.received_date }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
-              <div class="flex flex-wrap items-center gap-2">
-            <StatusBadge :status="detail.status" />
-            <button type="button" class="btn btn-ghost btn-sm shrink-0 gap-1.5" @click="goBack"><ArrowLeftIcon class="h-4 w-4" />
-            Back</button>
-          </div>
+              <StatusBadge :status="detail.status" />
+              <button type="button" class="btn btn-ghost btn-sm shrink-0 gap-1.5" @click="goBack">
+                <ArrowLeftIcon class="h-4 w-4" />
+                Back
+              </button>
             </div>
           </div>
         </div>
@@ -82,36 +83,39 @@ const goBack = () => {
           </div>
         </div>
 
-        <div class="card border border-primary/20 bg-primary/5 shadow">
-          <div class="card-body">
-            <h2 class="card-title text-lg">Lanjutkan proses</h2>
-            <p class="text-sm text-base-content/70">Setelah posting, stok dapat diperbarui (integrasi penuh menyusul).</p>
-            <div class="card-actions mt-4 flex-col items-stretch gap-2">
-              <template v-if="detail.status === 'approved'">
-                <div>
-                  <label class="label"><span class="label-text text-xs uppercase tracking-wide">Posting ke Warehouse</span></label>
-                  <select v-model="advanceForm.warehouse_id" class="select select-bordered select-sm w-full">
-                    <option value="">Pilih warehouse</option>
-                    <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.code }} - {{ w.name }}</option>
-                  </select>
-                </div>
-                <button
-                  type="button"
-                  class="btn btn-primary btn-sm"
-                  :disabled="advanceForm.processing"
-                  @click="postToStock"
-                >
-                  Posting ke stok
-                </button>
-              </template>
-              <template v-else-if="detail.status === 'posted'">
-                <p class="text-sm text-base-content/60">Sudah diposting — cek stok &amp; movement di inventory.</p>
-              </template>
-              <Link class="btn btn-outline btn-sm" :href="route('erp.purchasing.purchase-orders.show', detail.po_number)">
-                Kembali ke PO
-              </Link>
-              <Link class="btn btn-ghost btn-sm" :href="route('erp.inventory.stock-management')">Manajemen stok</Link>
-              <Link class="btn btn-ghost btn-sm" :href="route('erp.inventory.stock-opname')">Stok opname</Link>
+        <div class="lg:sticky lg:top-20 lg:z-10 lg:self-start">
+          <div class="card border border-primary/20 bg-primary/5 shadow">
+            <div class="card-body">
+              <h2 class="card-title text-lg">Lanjutkan proses</h2>
+              <p class="text-sm text-base-content/70">Setelah posting, stok dapat diperbarui (integrasi penuh menyusul).</p>
+              <p v-if="advanceForm.errors.action" class="mt-2 text-sm text-error">{{ advanceForm.errors.action }}</p>
+              <div class="card-actions mt-4 flex-col items-stretch gap-2">
+                <template v-if="detail.status === 'approved'">
+                  <div>
+                    <label class="label"><span class="label-text text-xs uppercase tracking-wide">Posting ke Warehouse</span></label>
+                    <select v-model="advanceForm.warehouse_id" class="select select-bordered select-sm w-full">
+                      <option value="">Pilih warehouse</option>
+                      <option v-for="w in warehouses" :key="w.id" :value="w.id">{{ w.code }} - {{ w.name }}</option>
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    :disabled="advanceForm.processing"
+                    @click="postToStock"
+                  >
+                    Posting ke stok
+                  </button>
+                </template>
+                <template v-else-if="detail.status === 'posted'">
+                  <p class="text-sm text-base-content/60">Sudah diposting — cek stok &amp; movement di inventory.</p>
+                </template>
+                <Link class="btn btn-outline btn-sm" :href="route('erp.purchasing.purchase-orders.show', detail.po_number)">
+                  Kembali ke PO
+                </Link>
+                <Link class="btn btn-ghost btn-sm" :href="route('erp.inventory.stock-management')">Manajemen stok</Link>
+                <Link class="btn btn-ghost btn-sm" :href="route('erp.inventory.stock-opname')">Stok opname</Link>
+              </div>
             </div>
           </div>
         </div>

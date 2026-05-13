@@ -136,7 +136,7 @@ const printReceipt = async () => {
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-7">
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-8">
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
           <p class="text-[11px] uppercase text-base-content/50">Channel</p>
           <p class="mt-1 font-semibold">{{ detail.sales_channel_label || detail.sales_channel || '-' }}</p>
@@ -150,8 +150,12 @@ const printReceipt = async () => {
           <p class="mt-1 font-semibold text-warning">- {{ format(detail.discount_total) }}</p>
         </div>
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
-          <p class="text-[11px] uppercase text-base-content/50">Biaya Tambahan</p>
+          <p class="text-[11px] uppercase text-base-content/50">Biaya lain (ditagih)</p>
           <p class="mt-1 font-semibold">{{ format(detail.additional_fee) }}</p>
+        </div>
+        <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+          <p class="text-[11px] uppercase text-base-content/50">Biaya admin channel (jurnal)</p>
+          <p class="mt-1 font-semibold">{{ format(detail.sales_channel_admin_fee ?? 0) }}</p>
         </div>
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
           <p class="text-[11px] uppercase text-base-content/50">Grand Total</p>
@@ -205,24 +209,26 @@ const printReceipt = async () => {
 
           <div class="ocn-panel">
             <div class="ocn-panel__head">
-              <h2 class="ocn-panel__title">Biaya tambahan</h2>
+              <h2 class="ocn-panel__title">Biaya lainnya</h2>
             </div>
             <div class="card-body p-0">
               <div class="overflow-x-auto">
                 <table class="table table-zebra">
                   <thead>
                     <tr>
-                      <th>Nama Biaya</th>
+                      <th>Nama</th>
+                      <th>Jenis</th>
                       <th class="text-right">Nominal</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-for="charge in detail.additional_charges" :key="charge.id">
                       <td>{{ charge.charge_name }}</td>
+                      <td><span class="badge badge-ghost badge-sm">{{ charge.kind === 'journal_admin' ? 'Jurnal (admin channel)' : 'Ditagih ke total' }}</span></td>
                       <td class="text-right font-semibold">{{ format(charge.amount) }}</td>
                     </tr>
                     <tr v-if="!detail.additional_charges?.length">
-                      <td colspan="2" class="py-8 text-center text-base-content/50">Tidak ada biaya tambahan.</td>
+                      <td colspan="3" class="py-8 text-center text-base-content/50">Tidak ada biaya lainnya.</td>
                     </tr>
                   </tbody>
                 </table>

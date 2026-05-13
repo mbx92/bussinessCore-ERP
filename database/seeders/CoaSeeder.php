@@ -35,6 +35,7 @@ class CoaSeeder extends Seeder
             ['code' => '2004', 'name' => 'Hutang Bank', 'type' => 'liability', 'normal_balance' => 'credit'],
             ['code' => '2005', 'name' => 'Pendapatan Diterima Dimuka', 'type' => 'liability', 'normal_balance' => 'credit'],
             ['code' => '2006', 'name' => 'Dana Titipan Material Client', 'type' => 'liability', 'normal_balance' => 'credit'],
+            ['code' => '2090', 'name' => 'Hutang Biaya Channel POS (estimasi)', 'type' => 'liability', 'normal_balance' => 'credit'],
 
             // Equity (3xxx)
             ['code' => '3001', 'name' => 'Modal Pemilik', 'type' => 'equity', 'normal_balance' => 'credit'],
@@ -64,6 +65,7 @@ class CoaSeeder extends Seeder
             ['code' => '5013', 'name' => 'Beban Lain-lain', 'type' => 'expense', 'normal_balance' => 'debit'],
             ['code' => '5014', 'name' => 'Beban Marketing & Iklan', 'type' => 'expense', 'normal_balance' => 'debit'],
             ['code' => '5015', 'name' => 'Beban Maintenance', 'type' => 'expense', 'normal_balance' => 'debit'],
+            ['code' => '5016', 'name' => 'Beban Admin Channel Penjualan POS', 'type' => 'expense', 'normal_balance' => 'debit'],
         ];
 
         foreach ($accounts as $account) {

@@ -48,6 +48,7 @@ class CashflowController extends Controller
             'cashAccounts' => Account::query()
                 ->where('is_active', true)
                 ->where('type', 'asset')
+                ->where('code', 'like', '100%')
                 ->orderBy('code')
                 ->get(['id', 'code', 'name']),
             'filters' => $request->only(['type', 'source', 'project_id', 'category', 'date_from', 'date_to', 'q']),
@@ -87,6 +88,7 @@ class CashflowController extends Controller
             'note' => 'nullable|string|max:1000',
             'recipient_name' => 'nullable|string|max:255',
         ]);
+        $validated['project_id'] = null;
 
         if ($validated['type'] === 'in') {
             $this->storeCashInEntry($validated);
@@ -111,6 +113,7 @@ class CashflowController extends Controller
             'date' => 'required|date',
             'note' => 'nullable|string|max:1000',
         ]);
+        unset($validated['project_id']);
         $this->assertCategoryExists('cash_in', $validated['category']);
         $this->resolveMappedAccountId('cash_in', $validated['category']);
         $cashIn->update($validated);
@@ -130,6 +133,7 @@ class CashflowController extends Controller
             'note' => 'nullable|string|max:1000',
             'recipient_name' => 'nullable|string|max:255',
         ]);
+        unset($validated['project_id']);
         $this->assertCategoryExists('cash_out', $validated['category']);
         $this->resolveMappedAccountId('cash_out', $validated['category']);
         $cashOut->update($validated);
@@ -371,7 +375,7 @@ class CashflowController extends Controller
         $revenueAccountId = $this->resolveMappedAccountId('cash_in', $validated['category']);
 
         $payload = [
-            'project_id' => $validated['project_id'],
+            'project_id' => $validated['project_id'] ?? null,
             'payment_method_id' => $validated['payment_method_id'] ?? null,
             'cash_account_id' => $validated['cash_account_id'],
             'category' => $validated['category'],
@@ -409,7 +413,7 @@ class CashflowController extends Controller
         $expenseAccountId = $this->resolveMappedAccountId('cash_out', $validated['category']);
 
         $payload = [
-            'project_id' => $validated['project_id'],
+            'project_id' => $validated['project_id'] ?? null,
             'cash_account_id' => $validated['cash_account_id'],
             'category' => $validated['category'],
             'amount' => $validated['amount'],

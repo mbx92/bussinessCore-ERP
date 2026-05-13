@@ -24,24 +24,40 @@ class ERPAccountingCoaSettingsController extends Controller
                 'key' => 'pos_sale_cash_account',
                 'label' => 'POS - Akun Kas/Bank',
                 'description' => 'Dipakai saat transaksi POS sukses diposting. (GL: pos_sale)',
-                'amount_source' => 'PosSale.grand_total (gross_total - discount_total + additional_fee)',
+                'amount_source' => 'PosSale.grand_total (penjualan bersih + biaya lain yang ditagih ke pelanggan, tidak termasuk biaya admin channel)',
                 'default_account_code' => '1001',
                 'source_module' => 'pos_sale',
             ],
             [
                 'key' => 'pos_sale_revenue_account',
                 'label' => 'POS - Akun Penjualan',
-                'description' => 'Credit untuk nilai penjualan bersih tanpa biaya tambahan. (GL: pos_sale)',
+                'description' => 'Credit penjualan barang (nilai transaksi). Biaya admin channel (jurnal saja) mengurangi kredit ini di jurnal POS.',
                 'amount_source' => 'PosSale.gross_total - PosSale.discount_total',
                 'default_account_code' => '4002',
                 'source_module' => 'pos_sale',
             ],
             [
                 'key' => 'pos_sale_additional_income_account',
-                'label' => 'POS - Akun Biaya Tambahan',
-                'description' => 'Credit untuk biaya tambahan. Jika kosong, sistem fallback ke akun penjualan POS.',
-                'amount_source' => 'PosSale.additional_fee',
+                'label' => 'POS - Biaya lainnya (ditagih)',
+                'description' => 'Credit untuk biaya lain yang menambah total bayar (contoh ongkir). Jika kosong, fallback ke akun penjualan POS.',
+                'amount_source' => 'PosSale.additional_fee (hanya baris biaya dengan jenis “tambah ke total”)',
                 'default_account_code' => '4004',
+                'source_module' => 'pos_sale',
+            ],
+            [
+                'key' => 'pos_sale_sales_channel_admin_expense',
+                'label' => 'POS - Beban admin channel',
+                'description' => 'Debit beban untuk biaya potongan sales channel (pasangan kredit: hutang estimasi channel).',
+                'amount_source' => 'PosSale.sales_channel_admin_fee',
+                'default_account_code' => '5016',
+                'source_module' => 'pos_sale',
+            ],
+            [
+                'key' => 'pos_sale_sales_channel_admin_payable',
+                'label' => 'POS - Hutang estimasi biaya channel',
+                'description' => 'Kredit hutang estimasi atas biaya admin channel (disettle ke pembayaran aktual menyusul).',
+                'amount_source' => 'PosSale.sales_channel_admin_fee',
+                'default_account_code' => '2090',
                 'source_module' => 'pos_sale',
             ],
             [
@@ -152,10 +168,24 @@ class ERPAccountingCoaSettingsController extends Controller
 
     public function applyDefaults(): RedirectResponse
     {
+        $adminChannelAccounts = [
+            ['code' => '2090', 'name' => 'Hutang Biaya Channel POS (estimasi)', 'type' => 'liability', 'normal_balance' => 'credit'],
+            ['code' => '5016', 'name' => 'Beban Admin Channel Penjualan POS', 'type' => 'expense', 'normal_balance' => 'debit'],
+        ];
+
+        foreach ($adminChannelAccounts as $account) {
+            Account::query()->updateOrCreate(
+                ['code' => $account['code']],
+                $account + ['is_active' => true],
+            );
+        }
+
         $systemDefaults = [
             'pos_sale_cash_account' => '1001',
             'pos_sale_revenue_account' => '4002',
             'pos_sale_additional_income_account' => '4004',
+            'pos_sale_sales_channel_admin_expense' => '5016',
+            'pos_sale_sales_channel_admin_payable' => '2090',
             'project_invoice_cash_account' => '1001',
             'project_invoice_revenue_account' => '4003',
         ];

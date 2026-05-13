@@ -38,10 +38,48 @@ const successToast = ref('');
 let toastTimer = null;
 const printingReceipt = ref(false);
 const additionalCharges = ref([]);
+const CHARGE_ADD = 'add_to_total';
+const CHARGE_ADMIN = 'journal_admin';
 const chargeForm = ref({
   name: '',
   amount: '0',
+  kind: CHARGE_ADD,
 });
+
+/** Modal pengganti alert() — stok, validasi biaya, draft, dll. */
+const posAlertDialogEl = ref(null);
+const posAlertTitle = ref('Informasi');
+const posAlertMessage = ref('');
+const posAlertVariant = ref('info');
+
+const posAlertTitleClass = computed(() => {
+  if (posAlertVariant.value === 'error') {
+    return 'text-error';
+  }
+  if (posAlertVariant.value === 'warning') {
+    return 'text-warning';
+  }
+  if (posAlertVariant.value === 'success') {
+    return 'text-success';
+  }
+  return '';
+});
+
+function showPosAlertModal(title, message, variant = 'info') {
+  posAlertTitle.value = title;
+  posAlertMessage.value = message;
+  posAlertVariant.value = variant;
+  posAlertDialogEl.value?.showModal();
+}
+
+function closePosAlertModal() {
+  posAlertDialogEl.value?.close();
+}
+
+function onPosAlertDialogClose() {
+  posAlertMessage.value = '';
+  posAlertVariant.value = 'info';
+}
 const selectedSalesChannelOption = computed(() => props.price_channels?.find((channel) => channel.key === selectedSalesChannel.value) ?? props.price_channels?.[0] ?? { key: 'retail', label: 'Retail' });
 const selectedSalesChannelLabel = computed(() => selectedSalesChannelOption.value?.label ?? 'Retail');
 
@@ -68,14 +106,18 @@ const openProductModal = () => {
 
 const addProductToCart = (selected) => {
   if (Number(selected.stock ?? 0) <= 0) {
-    alert('Stok produk habis.');
+    showPosAlertModal('Stok habis', 'Stok produk habis.', 'error');
     return;
   }
 
   const existing = cart.value.find((line) => line.productId === selected.id);
   if (existing) {
     if (existing.qty + 1 > existing.availableStock) {
-      alert(`Stok tidak mencukupi. Maksimal ${existing.availableStock} ${existing.uom}.`);
+      showPosAlertModal(
+        'Stok tidak mencukupi',
+        `Stok tidak mencukupi. Maksimal ${existing.availableStock} ${existing.uom}.`,
+        'error',
+      );
       return;
     }
     existing.qty += 1;
@@ -159,7 +201,11 @@ const sanitizeLineQty = (line) => {
   if (!Number.isFinite(qty) || qty < 1) qty = 1;
   if (maxQty > 0 && qty > maxQty) {
     qty = maxQty;
-    alert(`Qty melebihi stok. Maksimal ${maxQty} ${line.uom}.`);
+    showPosAlertModal(
+      'Stok tidak mencukupi',
+      `Qty melebihi stok. Maksimal ${maxQty} ${line.uom}.`,
+      'warning',
+    );
   }
   line.qty = qty;
 };
@@ -172,12 +218,17 @@ const lineSubtotal = (line) => {
 
 const sanitizeChargeAmount = (value) => parse(formatInput(value));
 
-const additionalChargeTotal = (charges) => charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+const additionalFeeAddToTotal = computed(() => additionalCharges.value
+  .filter((c) => (c.kind ?? CHARGE_ADD) === CHARGE_ADD)
+  .reduce((sum, c) => sum + Number(c.amount || 0), 0));
+
+const adminChannelFeeTotal = computed(() => additionalCharges.value
+  .filter((c) => (c.kind ?? CHARGE_ADD) === CHARGE_ADMIN)
+  .reduce((sum, c) => sum + Number(c.amount || 0), 0));
 
 const grossTotal = computed(() => cart.value.reduce((sum, line) => sum + (line.price * line.qty), 0));
 const discountTotal = computed(() => cart.value.reduce((sum, line) => sum + ((line.price * line.qty) * (Number(line.discountPercent || 0) / 100)), 0));
-const additionalFeeValue = computed(() => additionalChargeTotal(additionalCharges.value));
-const grandTotal = computed(() => (grossTotal.value - discountTotal.value) + Number(additionalFeeValue.value || 0));
+const grandTotal = computed(() => (grossTotal.value - discountTotal.value) + Number(additionalFeeAddToTotal.value || 0));
 const selectedPaymentMethod = computed(() => props.payment_methods?.find((method) => method.id === paymentMethodId.value) ?? null);
 const isCashPayment = computed(() => selectedPaymentMethod.value?.code === 'cash');
 const cashPaidValue = computed(() => parse(cashPaidInput.value));
@@ -199,7 +250,7 @@ const onAdditionalChargeAmountInput = (event) => {
 };
 
 const openAdditionalChargeModal = () => {
-  chargeForm.value = { name: '', amount: '0' };
+  chargeForm.value = { name: '', amount: '0', kind: CHARGE_ADD };
   document.getElementById('modal-additional-charges')?.showModal();
 };
 
@@ -208,11 +259,11 @@ const addAdditionalCharge = () => {
   const amount = sanitizeChargeAmount(chargeForm.value.amount);
 
   if (!name) {
-    alert('Nama biaya wajib diisi.');
+    showPosAlertModal('Biaya lainnya', 'Nama biaya wajib diisi.', 'warning');
     return;
   }
   if (Number(amount || 0) <= 0) {
-    alert('Nominal biaya harus lebih dari 0.');
+    showPosAlertModal('Biaya lainnya', 'Nominal biaya harus lebih dari 0.', 'warning');
     return;
   }
 
@@ -220,9 +271,10 @@ const addAdditionalCharge = () => {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     name,
     amount: Number(amount),
+    kind: chargeForm.value.kind === CHARGE_ADMIN ? CHARGE_ADMIN : CHARGE_ADD,
   });
 
-  chargeForm.value = { name: '', amount: '0' };
+  chargeForm.value = { name: '', amount: '0', kind: CHARGE_ADD };
 };
 
 const removeAdditionalCharge = (chargeId) => {
@@ -259,6 +311,7 @@ const processPayment = async () => {
         additional_charges: additionalCharges.value.map((charge) => ({
           name: charge.name,
           amount: Number(charge.amount),
+          kind: charge.kind ?? CHARGE_ADD,
         })),
         items: cart.value.map((line) => ({
           master_product_id: line.masterProductId,
@@ -286,8 +339,9 @@ const processPayment = async () => {
       grandTotal: payload.grand_total,
       cashPaid: payload.cash_paid,
       change: payload.change,
-      additionalFee: additionalFeeValue.value,
-      additionalCharges: additionalCharges.value.map((charge) => ({ ...charge })),
+      additionalFee: additionalFeeAddToTotal.value,
+      adminChannelFee: adminChannelFeeTotal.value,
+      additionalCharges: additionalCharges.value.map((charge) => ({ ...charge, kind: charge.kind ?? CHARGE_ADD })),
       lines: cart.value.map((line) => ({ ...line })),
     };
 
@@ -311,7 +365,7 @@ const processPayment = async () => {
 
 const saveDraft = () => {
   if (cart.value.length === 0) return;
-  alert(`Draft transaksi disimpan (${cart.value.length} item).`);
+  showPosAlertModal('Draft', `Draft transaksi disimpan (${cart.value.length} item).`, 'success');
 };
 
 const voidTransaction = () => {
@@ -528,10 +582,14 @@ onBeforeUnmount(() => {
             <div class="space-y-2 text-sm">
               <div class="flex justify-between"><span>Gross Total</span><span>{{ format(grossTotal) }}</span></div>
               <div class="flex justify-between"><span>Total Diskon</span><span class="text-warning">- {{ format(discountTotal) }}</span></div>
-              <div class="flex justify-between"><span>Biaya Tambahan</span><span>{{ format(additionalFeeValue) }}</span></div>
+              <div class="flex justify-between"><span>Biaya lainnya (ditagih)</span><span>{{ format(additionalFeeAddToTotal) }}</span></div>
+              <div v-if="adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+                <span>Biaya admin channel (hanya jurnal)</span>
+                <span>{{ format(adminChannelFeeTotal) }}</span>
+              </div>
               <div v-if="additionalCharges.length" class="rounded-lg bg-base-200/60 px-3 py-2 text-xs">
                 <div v-for="charge in additionalCharges" :key="charge.id" class="flex justify-between gap-2">
-                  <span class="truncate">{{ charge.name }}</span>
+                  <span class="truncate">{{ charge.name }} <span class="opacity-70">({{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }})</span></span>
                   <span>{{ format(charge.amount) }}</span>
                 </div>
               </div>
@@ -552,12 +610,12 @@ onBeforeUnmount(() => {
                 </select>
               </div>
               <div>
-                <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Biaya Tambahan</span></label>
+                <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Biaya lainnya</span></label>
                 <button class="btn btn-outline w-full justify-between" type="button" @click="openAdditionalChargeModal">
-                  <span>{{ additionalCharges.length ? `${additionalCharges.length} biaya ditambahkan` : 'Tambah biaya tambahan' }}</span>
-                  <span>{{ format(additionalFeeValue) }}</span>
+                  <span>{{ additionalCharges.length ? `${additionalCharges.length} biaya` : 'Tambah / atur biaya lainnya' }}</span>
+                  <span>{{ format(additionalFeeAddToTotal) }}</span>
                 </button>
-                <p class="mt-1 text-[11px] text-base-content/55">Input nama biaya dan nominal dari modal biaya tambahan.</p>
+                <p class="mt-1 text-[11px] text-base-content/55">Ongkir atau biaya lain menambah total bayar; biaya admin channel hanya tercatat di jurnal (tidak mengubah total bayar).</p>
               </div>
               <div>
                 <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Nominal Bayar</span></label>
@@ -608,14 +666,18 @@ onBeforeUnmount(() => {
           <div class="flex justify-between"><span>Total Item</span><span>{{ receiptLines.length }}</span></div>
           <div class="flex justify-between"><span>Sales Channel</span><span>{{ lastReceipt?.salesChannelLabel || selectedSalesChannelLabel }}</span></div>
           <div class="flex justify-between"><span>Metode Bayar</span><span class="uppercase">{{ lastReceipt?.paymentMethodName || selectedPaymentMethod?.name || '-' }}</span></div>
-          <div class="flex justify-between"><span>Biaya Tambahan</span><span>{{ format(lastReceipt?.additionalFee ?? additionalFeeValue) }}</span></div>
+          <div class="flex justify-between"><span>Biaya lainnya (ditagih)</span><span>{{ format(lastReceipt?.additionalFee ?? additionalFeeAddToTotal) }}</span></div>
+          <div v-if="(lastReceipt?.adminChannelFee ?? 0) > 0 || adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+            <span>Biaya admin channel (jurnal)</span>
+            <span>{{ format(lastReceipt?.adminChannelFee ?? adminChannelFeeTotal) }}</span>
+          </div>
           <div v-if="(lastReceipt?.additionalCharges?.length || additionalCharges.length)" class="rounded-lg bg-base-200/60 px-3 py-2 text-xs">
             <div
               v-for="charge in (lastReceipt?.additionalCharges?.length ? lastReceipt.additionalCharges : additionalCharges)"
               :key="charge.id"
               class="flex justify-between gap-2"
             >
-              <span class="truncate">{{ charge.name }}</span>
+              <span class="truncate">{{ charge.name }} <span class="opacity-70">({{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }})</span></span>
               <span>{{ format(charge.amount) }}</span>
             </div>
           </div>
@@ -639,10 +701,20 @@ onBeforeUnmount(() => {
 
     <dialog id="modal-additional-charges" class="modal">
       <div class="modal-box max-w-lg">
-        <h3 class="font-bold text-lg">Biaya Tambahan</h3>
+        <h3 class="font-bold text-lg">Biaya lainnya</h3>
         <div class="mt-4 space-y-3">
+          <div class="space-y-2 rounded-lg bg-base-200/50 p-3 text-sm">
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="chargeForm.kind" type="radio" class="radio radio-sm radio-primary mt-0.5" :value="CHARGE_ADD" />
+              <span><span class="font-medium">Tambah ke total bayar</span> — misalnya ongkir atau layanan yang dibebankan ke pelanggan.</span>
+            </label>
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="chargeForm.kind" type="radio" class="radio radio-sm radio-primary mt-0.5" :value="CHARGE_ADMIN" />
+              <span><span class="font-medium">Biaya admin channel (jurnal saja)</span> — potongan channel; tidak mengubah total yang harus dibayar di POS.</span>
+            </label>
+          </div>
           <div class="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-            <input v-model="chargeForm.name" type="text" class="input input-bordered w-full" placeholder="Nama biaya, contoh: Parkir" />
+            <input v-model="chargeForm.name" type="text" class="input input-bordered w-full" placeholder="Nama biaya, contoh: Ongkir / Komisi channel" />
             <input :value="chargeForm.amount" type="text" class="input input-bordered w-full" placeholder="Nominal" @input="onAdditionalChargeAmountInput" />
             <button class="btn btn-primary" type="button" @click="addAdditionalCharge">Tambah</button>
           </div>
@@ -651,16 +723,22 @@ onBeforeUnmount(() => {
               <div v-for="charge in additionalCharges" :key="charge.id" class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div>
                   <p class="font-medium">{{ charge.name }}</p>
-                  <p class="text-xs text-base-content/60">{{ format(charge.amount) }}</p>
+                  <p class="text-xs text-base-content/60">{{ format(charge.amount) }} · {{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }}</p>
                 </div>
                 <button class="btn btn-ghost btn-xs text-error" type="button" @click="removeAdditionalCharge(charge.id)">Hapus</button>
               </div>
             </div>
-            <div v-else class="px-4 py-6 text-center text-sm text-base-content/50">Belum ada biaya tambahan.</div>
+            <div v-else class="px-4 py-6 text-center text-sm text-base-content/50">Belum ada biaya lainnya.</div>
           </div>
-          <div class="flex justify-between text-sm font-semibold">
-            <span>Total biaya tambahan</span>
-            <span>{{ format(additionalFeeValue) }}</span>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between font-semibold">
+              <span>Total ditagih ke pelanggan</span>
+              <span>{{ format(additionalFeeAddToTotal) }}</span>
+            </div>
+            <div v-if="adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+              <span>Total biaya admin (jurnal)</span>
+              <span>{{ format(adminChannelFeeTotal) }}</span>
+            </div>
           </div>
         </div>
         <div class="modal-action">
@@ -740,10 +818,14 @@ onBeforeUnmount(() => {
             <div class="space-y-2 text-sm">
               <div class="flex justify-between"><span>Gross Total</span><span>{{ format(grossTotal) }}</span></div>
               <div class="flex justify-between"><span>Total Diskon</span><span class="text-warning">- {{ format(discountTotal) }}</span></div>
-              <div class="flex justify-between"><span>Biaya Tambahan</span><span>{{ format(additionalFeeValue) }}</span></div>
+              <div class="flex justify-between"><span>Biaya lainnya (ditagih)</span><span>{{ format(additionalFeeAddToTotal) }}</span></div>
+              <div v-if="adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+                <span>Biaya admin channel (hanya jurnal)</span>
+                <span>{{ format(adminChannelFeeTotal) }}</span>
+              </div>
               <div v-if="additionalCharges.length" class="rounded-lg bg-base-200/60 px-3 py-2 text-xs">
                 <div v-for="charge in additionalCharges" :key="charge.id" class="flex justify-between gap-2">
-                  <span class="truncate">{{ charge.name }}</span>
+                  <span class="truncate">{{ charge.name }} <span class="opacity-70">({{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }})</span></span>
                   <span>{{ format(charge.amount) }}</span>
                 </div>
               </div>
@@ -764,12 +846,12 @@ onBeforeUnmount(() => {
                 </select>
               </div>
               <div>
-                <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Biaya Tambahan</span></label>
+                <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Biaya lainnya</span></label>
                 <button class="btn btn-outline w-full justify-between" type="button" @click="openAdditionalChargeModal">
-                  <span>{{ additionalCharges.length ? `${additionalCharges.length} biaya ditambahkan` : 'Tambah biaya tambahan' }}</span>
-                  <span>{{ format(additionalFeeValue) }}</span>
+                  <span>{{ additionalCharges.length ? `${additionalCharges.length} biaya` : 'Tambah / atur biaya lainnya' }}</span>
+                  <span>{{ format(additionalFeeAddToTotal) }}</span>
                 </button>
-                <p class="mt-1 text-[11px] text-base-content/55">Input nama biaya dan nominal dari modal biaya tambahan.</p>
+                <p class="mt-1 text-[11px] text-base-content/55">Ongkir atau biaya lain menambah total bayar; biaya admin channel hanya tercatat di jurnal (tidak mengubah total bayar).</p>
               </div>
               <div>
                 <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Nominal Bayar</span></label>
@@ -820,14 +902,18 @@ onBeforeUnmount(() => {
           <div class="flex justify-between"><span>Total Item</span><span>{{ receiptLines.length }}</span></div>
           <div class="flex justify-between"><span>Sales Channel</span><span>{{ lastReceipt?.salesChannelLabel || selectedSalesChannelLabel }}</span></div>
           <div class="flex justify-between"><span>Metode Bayar</span><span class="uppercase">{{ lastReceipt?.paymentMethodName || selectedPaymentMethod?.name || '-' }}</span></div>
-          <div class="flex justify-between"><span>Biaya Tambahan</span><span>{{ format(lastReceipt?.additionalFee ?? additionalFeeValue) }}</span></div>
+          <div class="flex justify-between"><span>Biaya lainnya (ditagih)</span><span>{{ format(lastReceipt?.additionalFee ?? additionalFeeAddToTotal) }}</span></div>
+          <div v-if="(lastReceipt?.adminChannelFee ?? 0) > 0 || adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+            <span>Biaya admin channel (jurnal)</span>
+            <span>{{ format(lastReceipt?.adminChannelFee ?? adminChannelFeeTotal) }}</span>
+          </div>
           <div v-if="(lastReceipt?.additionalCharges?.length || additionalCharges.length)" class="rounded-lg bg-base-200/60 px-3 py-2 text-xs">
             <div
               v-for="charge in (lastReceipt?.additionalCharges?.length ? lastReceipt.additionalCharges : additionalCharges)"
               :key="charge.id"
               class="flex justify-between gap-2"
             >
-              <span class="truncate">{{ charge.name }}</span>
+              <span class="truncate">{{ charge.name }} <span class="opacity-70">({{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }})</span></span>
               <span>{{ format(charge.amount) }}</span>
             </div>
           </div>
@@ -851,10 +937,20 @@ onBeforeUnmount(() => {
 
     <dialog id="modal-additional-charges" class="modal">
       <div class="modal-box max-w-lg">
-        <h3 class="font-bold text-lg">Biaya Tambahan</h3>
+        <h3 class="font-bold text-lg">Biaya lainnya</h3>
         <div class="mt-4 space-y-3">
+          <div class="space-y-2 rounded-lg bg-base-200/50 p-3 text-sm">
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="chargeForm.kind" type="radio" class="radio radio-sm radio-primary mt-0.5" :value="CHARGE_ADD" />
+              <span><span class="font-medium">Tambah ke total bayar</span> — misalnya ongkir atau layanan yang dibebankan ke pelanggan.</span>
+            </label>
+            <label class="flex cursor-pointer items-start gap-2">
+              <input v-model="chargeForm.kind" type="radio" class="radio radio-sm radio-primary mt-0.5" :value="CHARGE_ADMIN" />
+              <span><span class="font-medium">Biaya admin channel (jurnal saja)</span> — potongan channel; tidak mengubah total yang harus dibayar di POS.</span>
+            </label>
+          </div>
           <div class="grid gap-3 md:grid-cols-[1fr_180px_auto]">
-            <input v-model="chargeForm.name" type="text" class="input input-bordered w-full" placeholder="Nama biaya, contoh: Parkir" />
+            <input v-model="chargeForm.name" type="text" class="input input-bordered w-full" placeholder="Nama biaya, contoh: Ongkir / Komisi channel" />
             <input :value="chargeForm.amount" type="text" class="input input-bordered w-full" placeholder="Nominal" @input="onAdditionalChargeAmountInput" />
             <button class="btn btn-primary" type="button" @click="addAdditionalCharge">Tambah</button>
           </div>
@@ -863,16 +959,22 @@ onBeforeUnmount(() => {
               <div v-for="charge in additionalCharges" :key="charge.id" class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                 <div>
                   <p class="font-medium">{{ charge.name }}</p>
-                  <p class="text-xs text-base-content/60">{{ format(charge.amount) }}</p>
+                  <p class="text-xs text-base-content/60">{{ format(charge.amount) }} · {{ (charge.kind ?? CHARGE_ADD) === CHARGE_ADMIN ? 'jurnal' : 'ke total' }}</p>
                 </div>
                 <button class="btn btn-ghost btn-xs text-error" type="button" @click="removeAdditionalCharge(charge.id)">Hapus</button>
               </div>
             </div>
-            <div v-else class="px-4 py-6 text-center text-sm text-base-content/50">Belum ada biaya tambahan.</div>
+            <div v-else class="px-4 py-6 text-center text-sm text-base-content/50">Belum ada biaya lainnya.</div>
           </div>
-          <div class="flex justify-between text-sm font-semibold">
-            <span>Total biaya tambahan</span>
-            <span>{{ format(additionalFeeValue) }}</span>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between font-semibold">
+              <span>Total ditagih ke pelanggan</span>
+              <span>{{ format(additionalFeeAddToTotal) }}</span>
+            </div>
+            <div v-if="adminChannelFeeTotal > 0" class="flex justify-between text-xs text-base-content/65">
+              <span>Total biaya admin (jurnal)</span>
+              <span>{{ format(adminChannelFeeTotal) }}</span>
+            </div>
           </div>
         </div>
         <div class="modal-action">
@@ -894,4 +996,17 @@ onBeforeUnmount(() => {
     @close="showProductModal = false"
     @confirm="addProductToCart"
   />
+
+  <dialog ref="posAlertDialogEl" class="modal" @close="onPosAlertDialogClose">
+    <div class="modal-box max-w-md">
+      <h3 class="font-bold text-lg" :class="posAlertTitleClass">{{ posAlertTitle }}</h3>
+      <p class="mt-3 text-sm leading-relaxed text-base-content/85">{{ posAlertMessage }}</p>
+      <div class="modal-action mt-2">
+        <button type="button" class="btn btn-primary" @click="closePosAlertModal">Mengerti</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button type="submit" aria-label="Tutup">close</button>
+    </form>
+  </dialog>
 </template>

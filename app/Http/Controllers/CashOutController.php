@@ -37,7 +37,7 @@ class CashOutController extends Controller
                 'id' => $c->id,
                 'project_id' => $c->project_id,
                 'cash_account_id' => $c->cash_account_id,
-                'project_name' => $c->project->name,
+                'project_name' => $c->project?->name ?? 'Operasional Umum',
                 'category' => $c->category,
                 'amount' => (float) $c->amount,
                 'date' => $c->date->format('Y-m-d'),

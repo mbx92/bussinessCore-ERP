@@ -61,12 +61,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('erp/chatbot/ask', [ErpChatbotController::class, 'ask'])->name('erp.chatbot.ask');
 
-    Route::middleware('role_or_permission:admin|manajer|menu.erp.accounting|erp.accounting.post-journal')->group(function () {
+    Route::middleware('role_or_permission:admin|manajer|finance|menu.erp.accounting|erp.accounting.post-journal|erp.reporting.view')->group(function () {
         Route::get('erp/accounting', [ERPModuleController::class, 'accounting'])->name('erp.accounting');
         Route::get('erp/accounting/cashflow', [CashflowController::class, 'index'])->name('erp.accounting.cashflow');
+        Route::get('erp/accounting/cash-flow', fn () => redirect()->route('erp.accounting.cashflow', request()->query()))->name('erp.accounting.cashflow.redirect-legacy');
     });
 
-    Route::middleware('role_or_permission:admin|manajer|erp.accounting.post-journal')->group(function () {
+    Route::middleware('role_or_permission:admin|manajer|finance|erp.accounting.post-journal')->group(function () {
         Route::post('erp/accounting/cashflow', [CashflowController::class, 'store'])->name('erp.accounting.cashflow.store');
         Route::patch('erp/accounting/cashflow/cash-in/{cashIn}', [CashflowController::class, 'updateCashIn'])->name('erp.accounting.cashflow.cash-in.update');
         Route::delete('erp/accounting/cashflow/cash-in/{cashIn}', [CashflowController::class, 'destroyCashIn'])->name('erp.accounting.cashflow.cash-in.destroy');

@@ -22,7 +22,9 @@ return new class extends Migration
 
         });
 
-        DB::statement("ALTER TABLE cash_out ADD CONSTRAINT chk_cash_out_category CHECK (category IN ('biaya_tim','komisi_referral','operasional','lainnya'))");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE cash_out ADD CONSTRAINT chk_cash_out_category CHECK (category IN ('biaya_tim','komisi_referral','operasional','lainnya'))");
+        }
     }
 
     public function down(): void

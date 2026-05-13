@@ -23,7 +23,9 @@ return new class extends Migration
             $table->unique(['project_id', 'user_id']);
         });
 
-        DB::statement("ALTER TABLE team_distributions ADD CONSTRAINT chk_team_role CHECK (role_in_project IN ('lead','developer','designer','qa'))");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE team_distributions ADD CONSTRAINT chk_team_role CHECK (role_in_project IN ('lead','developer','designer','qa'))");
+        }
     }
 
     public function down(): void

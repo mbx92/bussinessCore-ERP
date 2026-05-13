@@ -62,6 +62,7 @@ class UserSeeder extends Seeder
             'erp.accounting.post-journal',
             'erp.reporting.view',
             'erp.period.close',
+            'menu.erp.accounting',
         ]);
 
         $admin = User::query()->firstOrCreate(

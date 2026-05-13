@@ -21,7 +21,9 @@ return new class extends Migration
 
         });
 
-        DB::statement("ALTER TABLE cash_in ADD CONSTRAINT chk_cash_in_category CHECK (category IN ('pendapatan_jasa','lainnya'))");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE cash_in ADD CONSTRAINT chk_cash_in_category CHECK (category IN ('pendapatan_jasa','lainnya'))");
+        }
     }
 
     public function down(): void

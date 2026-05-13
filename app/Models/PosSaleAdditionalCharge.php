@@ -11,6 +11,7 @@ class PosSaleAdditionalCharge extends Model
         'pos_sale_id',
         'charge_name',
         'amount',
+        'kind',
     ];
 
     protected function casts(): array
@@ -25,4 +26,3 @@ class PosSaleAdditionalCharge extends Model
         return $this->belongsTo(PosSale::class, 'pos_sale_id');
     }
 }
-
