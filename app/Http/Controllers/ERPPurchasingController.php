@@ -197,7 +197,7 @@ class ERPPurchasingController extends Controller
             ->values();
         $totalAmount = (float) $lines->sum('line_total');
 
-        DB::transaction(function () use ($baseValidated, $vendor, $lines, $totalAmount): void {
+        $poNumber = DB::transaction(function () use ($baseValidated, $vendor, $lines, $totalAmount): string {
             $number = $this->documentNumberService->next('purchasing', 'purchase_order', [
                 'prefix' => 'PO',
                 'padding_length' => 6,
@@ -215,9 +215,13 @@ class ERPPurchasingController extends Controller
             foreach ($lines as $line) {
                 $po->lines()->create($line);
             }
+
+            return $po->number;
         });
 
-        return back()->with('flash', ['type' => 'success', 'message' => 'Purchase Order berhasil ditambahkan.']);
+        return redirect()
+            ->route('erp.purchasing.purchase-orders.show', $poNumber)
+            ->with('flash', ['type' => 'success', 'message' => 'Purchase Order berhasil dibuat.']);
     }
 
     public function purchaseOrderShow(PurchaseOrder $purchaseOrder): Response
@@ -571,10 +575,15 @@ class ERPPurchasingController extends Controller
             'stock_suggestion_qty' => $stockSuggestion,
             'project_shortage_qty' => $projectShortageQty,
             'on_order_qty' => $onOrder,
+            'selling_price' => (float) $item->selling_price,
         ];
 
         return Inertia::render('ERP/Purchasing/ReorderShow', [
             'detail' => $detail,
+            'suppliers' => Vendor::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['code', 'name']),
         ]);
     }
 

@@ -1,13 +1,44 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { computed } from 'vue';
 
 const props = defineProps({
   detail: Object,
+  suppliers: Array,
 });
 
 const goBack = () => {
   router.visit(route('erp.purchasing.reorder-planning'));
+};
+
+const poForm = useForm({
+  vendor_code: '',
+  order_date: new Date().toISOString().slice(0, 10),
+  eta_date: '',
+  notes: 'Generated from reorder planning',
+  lines: [
+    {
+      product_id: props.detail.id,
+      qty: Number(props.detail.suggested_qty || 1),
+      unit_price: Number(props.detail.selling_price || 0),
+    },
+  ],
+});
+
+const estimatedTotal = computed(() =>
+  Number(poForm.lines[0].qty || 0) * Number(poForm.lines[0].unit_price || 0),
+);
+
+const formatIdr = (value) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value ?? 0);
+
+const submitPo = () => {
+  poForm.lines[0].product_id = props.detail.id;
+  poForm.post(route('erp.purchasing.purchase-orders.store'), {
+    preserveScroll: true,
+  });
 };
 </script>
 
@@ -80,13 +111,58 @@ const goBack = () => {
 
         <div class="card border border-primary/20 bg-primary/5 shadow">
           <div class="card-body">
-            <h2 class="card-title text-lg">Lanjutkan proses</h2>
-            <p class="text-sm text-base-content/70">Tindak lanjut ke master data dan pembuatan PO.</p>
+            <h2 class="card-title text-lg">Buat PO</h2>
+            <p class="text-sm text-base-content/70">Pilih supplier dan buat Purchase Order langsung dari perencanaan ini.</p>
+            <div class="mt-4 space-y-3">
+              <div>
+                <label class="label"><span class="label-text">Supplier</span></label>
+                <select v-model="poForm.vendor_code" class="select select-bordered w-full" :class="poForm.errors.vendor_code ? 'select-error' : ''">
+                  <option value="">Pilih supplier</option>
+                  <option v-for="supplier in suppliers" :key="supplier.code" :value="supplier.code">
+                    {{ supplier.code }} - {{ supplier.name }}
+                  </option>
+                </select>
+                <p v-if="poForm.errors.vendor_code" class="mt-1 text-xs text-error">{{ poForm.errors.vendor_code }}</p>
+              </div>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="label"><span class="label-text">Tanggal PO</span></label>
+                  <input v-model="poForm.order_date" type="date" class="input input-bordered w-full" :class="poForm.errors.order_date ? 'input-error' : ''" />
+                  <p v-if="poForm.errors.order_date" class="mt-1 text-xs text-error">{{ poForm.errors.order_date }}</p>
+                </div>
+                <div>
+                  <label class="label"><span class="label-text">ETA</span></label>
+                  <input v-model="poForm.eta_date" type="date" class="input input-bordered w-full" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label class="label"><span class="label-text">Qty PO</span></label>
+                  <input v-model.number="poForm.lines[0].qty" type="number" min="0.01" step="0.01" class="input input-bordered w-full" :class="poForm.errors['lines.0.qty'] ? 'input-error' : ''" />
+                  <p v-if="poForm.errors['lines.0.qty']" class="mt-1 text-xs text-error">{{ poForm.errors['lines.0.qty'] }}</p>
+                </div>
+                <div>
+                  <label class="label"><span class="label-text">Harga Satuan</span></label>
+                  <input v-model.number="poForm.lines[0].unit_price" type="number" min="0.01" step="0.01" class="input input-bordered w-full" :class="poForm.errors['lines.0.unit_price'] ? 'input-error' : ''" />
+                  <p v-if="poForm.errors['lines.0.unit_price']" class="mt-1 text-xs text-error">{{ poForm.errors['lines.0.unit_price'] }}</p>
+                </div>
+              </div>
+              <div>
+                <label class="label"><span class="label-text">Catatan</span></label>
+                <textarea v-model="poForm.notes" class="textarea textarea-bordered w-full" rows="2" />
+              </div>
+              <div class="rounded-xl bg-base-100 p-3 text-sm">
+                <span class="text-base-content/60">Estimasi nilai PO:</span>
+                <span class="ml-2 font-semibold">{{ formatIdr(estimatedTotal) }}</span>
+              </div>
+            </div>
             <div class="card-actions mt-4 flex-col items-stretch gap-2">
+              <button class="btn btn-primary btn-sm" :disabled="poForm.processing || !poForm.vendor_code" @click="submitPo">
+                Buat PO Sekarang
+              </button>
               <Link class="btn btn-primary btn-sm" :href="route('erp.master-products.show', detail.id)">
                 Detail master produk
               </Link>
-              <Link class="btn btn-outline btn-sm" :href="route('erp.purchasing.purchase-orders')">Buat / kelola PO</Link>
               <Link class="btn btn-ghost btn-sm" :href="route('erp.purchasing.suppliers')">Pilih supplier</Link>
             </div>
           </div>
