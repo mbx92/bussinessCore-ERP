@@ -9,6 +9,8 @@ use App\ERP\Purchasing\Models\PurchaseOrder;
 use App\ERP\Purchasing\Models\PurchaseOrderLine;
 use App\ERP\Purchasing\Models\Vendor;
 use App\ERP\Shared\Enums\DocumentStatus;
+use App\Http\Middleware\ErpMaintenanceMode;
+use App\Http\Middleware\LogErpActivity;
 use App\Models\MasterProduct;
 use App\Models\MasterProductWarehouseStock;
 use App\Models\Project;
@@ -17,6 +19,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\Middleware\RoleMiddleware;
 use Tests\TestCase;
 
 class ProjectMaterialChannelTest extends TestCase
@@ -388,12 +391,58 @@ class ProjectMaterialChannelTest extends TestCase
             ->etc());
     }
 
+    public function test_finished_goods_project_shortage_appears_in_reorder_planning(): void
+    {
+        $this->disableErpMiddleware();
+
+        $user = User::factory()->create();
+        $project = $this->createProject();
+        $warehouse = Warehouse::create([
+            'code' => 'WH-FG',
+            'name' => 'Main',
+            'is_active' => true,
+        ]);
+        $product = MasterProduct::create([
+            'sku' => 'FG-REORDER-01',
+            'name' => 'Barang Jadi via Project',
+            'category' => 'General',
+            'uom' => 'pcs',
+            'sales_channel' => 'both',
+            'product_type' => MasterProduct::PRODUCT_TYPE_FINISHED_GOODS,
+            'status' => 'active',
+            'stock' => 0,
+            'min_stock' => 0,
+            'total_sold' => 0,
+            'lead_time_days' => 1,
+        ]);
+
+        ProjectMaterial::create([
+            'project_id' => $project->id,
+            'master_product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'planned_qty' => 3,
+            'reserved_qty' => 0,
+            'issued_qty' => 0,
+            'status' => 'planned',
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('erp.purchasing.reorder-planning'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ERP/Purchasing/ReorderPlanning')
+                ->where('reorderSuggestions.0.id', $product->id)
+                ->where('reorderSuggestions.0.project_shortage_qty', 3)
+                ->where('reorderSuggestions.0.suggested_qty', 3));
+    }
+
     private function disableErpMiddleware(): void
     {
         $this->withoutMiddleware([
-            \App\Http\Middleware\ErpMaintenanceMode::class,
-            \App\Http\Middleware\LogErpActivity::class,
-            \Spatie\Permission\Middleware\RoleMiddleware::class,
+            ErpMaintenanceMode::class,
+            LogErpActivity::class,
+            RoleMiddleware::class,
         ]);
     }
 

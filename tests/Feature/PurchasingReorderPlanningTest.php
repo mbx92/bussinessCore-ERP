@@ -2,12 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\ERP\Inventory\Models\Warehouse;
 use App\ERP\Purchasing\Models\PurchaseOrder;
 use App\ERP\Purchasing\Models\Vendor;
+use App\Http\Middleware\ErpMaintenanceMode;
+use App\Http\Middleware\LogErpActivity;
 use App\Models\MasterProduct;
+use App\Models\MasterProductWarehouseStock;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\Middleware\RoleMiddleware;
 use Tests\TestCase;
 
 class PurchasingReorderPlanningTest extends TestCase
@@ -141,12 +146,63 @@ class PurchasingReorderPlanningTest extends TestCase
         $this->assertDatabaseCount('purchase_orders', 0);
     }
 
+    public function test_reorder_planning_uses_warehouse_available_when_warehouse_rows_exist(): void
+    {
+        $this->disableErpMiddleware();
+
+        $user = User::factory()->create();
+        $warehouse = Warehouse::query()->create([
+            'code' => 'WH-RP-01',
+            'name' => 'Gudang Reorder',
+            'is_active' => true,
+        ]);
+        $product = MasterProduct::query()->create([
+            'sku' => 'MAT-WH-LOW-01',
+            'name' => 'Stok Gudang Rendah',
+            'category' => 'Material',
+            'uom' => 'pcs',
+            'sales_channel' => 'project',
+            'product_type' => 'finished_goods',
+            'status' => 'active',
+            'stock' => 500,
+            'min_stock' => 30,
+            'total_sold' => 0,
+            'lead_time_days' => 7,
+            'selling_price' => 10000,
+        ]);
+        MasterProductWarehouseStock::query()->create([
+            'master_product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'qty' => 8,
+            'reserved_qty' => 0,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('erp.purchasing.reorder-planning'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ERP/Purchasing/ReorderPlanning')
+                ->where('reorderSuggestions.0.id', $product->id)
+                ->where('reorderSuggestions.0.stock', 8)
+                ->where('reorderSuggestions.0.stock_suggestion_qty', 22));
+
+        $this
+            ->actingAs($user)
+            ->get(route('erp.purchasing.reorder-planning.show', $product))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ERP/Purchasing/ReorderShow')
+                ->where('detail.stock', 8)
+                ->where('detail.stock_suggestion_qty', 22));
+    }
+
     private function disableErpMiddleware(): void
     {
         $this->withoutMiddleware([
-            \App\Http\Middleware\ErpMaintenanceMode::class,
-            \App\Http\Middleware\LogErpActivity::class,
-            \Spatie\Permission\Middleware\RoleMiddleware::class,
+            ErpMaintenanceMode::class,
+            LogErpActivity::class,
+            RoleMiddleware::class,
         ]);
     }
 

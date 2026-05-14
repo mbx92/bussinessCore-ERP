@@ -44,7 +44,7 @@ class ERPModuleController extends Controller
             ['title' => 'Manajemen Supplier', 'description' => 'Kelola data supplier dan performa lead time.', 'route' => 'erp.purchasing.suppliers', 'icon' => 'truck'],
             ['title' => 'Purchase Order', 'description' => 'Buat dan monitor PO pembelian barang.', 'route' => 'erp.purchasing.purchase-orders', 'icon' => 'clipboard-list'],
             ['title' => 'Penerimaan Barang', 'description' => 'Catat penerimaan barang dari supplier (GRN).', 'route' => 'erp.purchasing.goods-receipts', 'icon' => 'inbox-arrow-down'],
-            ['title' => 'Perencanaan Reorder', 'description' => 'Saran reorder otomatis berdasarkan min stock dan lead time.', 'route' => 'erp.purchasing.reorder-planning', 'icon' => 'sparkles'],
+            ['title' => 'Perencanaan Reorder', 'description' => 'Saran reorder dari min stock, lead time, penjualan, kekurangan project (material & finished goods), dan PO outstanding.', 'route' => 'erp.purchasing.reorder-planning', 'icon' => 'sparkles'],
         ]);
     }
 

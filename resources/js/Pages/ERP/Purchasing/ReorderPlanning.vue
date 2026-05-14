@@ -84,7 +84,7 @@ const submitPlan = () => {
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Purchasing Workspace</p>
               <h1 class="ocn-panel__title mt-1">Perencanaan Reorder</h1>
-              <p class="ocn-panel__desc mt-1">Klik baris untuk detail angka reorder, master produk, dan alur PO. Saran dari min stock, lead time, penjualan 30 hari, dan kekurangan material project.</p>
+              <p class="ocn-panel__desc mt-1">Klik baris untuk detail angka reorder, master produk, dan alur PO. Saran dari min stock, lead time, penjualan 30 hari, dan kekurangan material project (termasuk barang jadi / finished_goods dan material project).</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
               <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.purchasing')">
@@ -114,7 +114,7 @@ const submitPlan = () => {
       <div class="ocn-panel">
         <div class="ocn-panel__head">
           <h2 class="ocn-panel__title">Saran reorder</h2>
-          <p class="ocn-panel__desc">Produk di bawah minimum, masih kurang untuk project, atau mendekati lead time.</p>
+          <p class="ocn-panel__desc">Produk di bawah minimum, masih kurang untuk project (material project atau finished_goods), atau mendekati lead time.</p>
         </div>
         <div class="overflow-x-auto">
           <table class="table table-zebra">

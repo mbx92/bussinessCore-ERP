@@ -20,6 +20,7 @@ use App\Models\ProductStockMovement;
 use App\Models\ProjectMaterial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -500,7 +501,7 @@ class ERPPurchasingController extends Controller
         $projectShortages = ProjectMaterial::query()
             ->select('master_product_id')
             ->selectRaw('SUM(CASE WHEN planned_qty > reserved_qty THEN planned_qty - reserved_qty ELSE 0 END) as shortage_qty')
-            ->whereHas('product', fn ($q) => $q->where('product_type', MasterProduct::PRODUCT_TYPE_PROJECT_MATERIAL))
+            ->whereHas('product', fn ($q) => $q->whereIn('product_type', $this->reorderStockProductTypes()))
             ->whereHas('project', fn ($q) => $q->whereIn('status', ['negosiasi', 'berjalan']))
             ->whereRaw('planned_qty > reserved_qty')
             ->groupBy('master_product_id')
@@ -519,7 +520,7 @@ class ERPPurchasingController extends Controller
             ->pluck('on_order_qty', 'master_product_id');
 
         $products = MasterProduct::query()
-            ->where('product_type', '!=', MasterProduct::PRODUCT_TYPE_SERVICE)
+            ->whereIn('product_type', $this->reorderStockProductTypes())
             ->when($request->filled('q'), function ($q) use ($request): void {
                 $term = $request->string('q')->toString();
                 $q->where(function ($inner) use ($term): void {
@@ -530,12 +531,15 @@ class ERPPurchasingController extends Controller
             ->orderBy('name')
             ->get();
 
+        $onHandById = $this->onHandByProductIdForReorder($products);
+
         $reorderSuggestions = $products
-            ->map(function (MasterProduct $item) use ($projectShortages, $onOrderQty) {
+            ->map(function (MasterProduct $item) use ($projectShortages, $onOrderQty, $onHandById) {
+                $onHand = $onHandById[$item->id] ?? (float) $item->stock;
                 $dailyUsage = $item->total_sold > 0 ? $item->total_sold / 30 : 0;
                 $leadDemand = (int) ceil($dailyUsage * max($item->lead_time_days, 1));
                 $targetStock = $item->min_stock + $leadDemand;
-                $stockSuggestion = max($targetStock - $item->stock, 0);
+                $stockSuggestion = max($targetStock - $onHand, 0);
                 $projectShortageQty = (float) ($projectShortages[$item->id] ?? 0);
                 $onOrder = (float) ($onOrderQty[$item->id] ?? 0);
                 $suggestedQty = max($stockSuggestion + $projectShortageQty - $onOrder, 0);
@@ -544,7 +548,7 @@ class ERPPurchasingController extends Controller
                     'id' => $item->id,
                     'sku' => $item->sku,
                     'name' => $item->name,
-                    'stock' => $item->stock,
+                    'stock' => $onHand,
                     'min_stock' => $item->min_stock,
                     'lead_time_days' => $item->lead_time_days,
                     'total_sold' => $item->total_sold,
@@ -571,13 +575,14 @@ class ERPPurchasingController extends Controller
     {
         $item = $masterProduct;
         abort_if($item->product_type === MasterProduct::PRODUCT_TYPE_SERVICE, 404);
+        $onHand = $this->onHandByProductIdForReorder(collect([$item]))[$item->id] ?? (float) $item->stock;
         $dailyUsage = $item->total_sold > 0 ? $item->total_sold / 30 : 0;
         $leadDemand = (int) ceil($dailyUsage * max($item->lead_time_days, 1));
         $targetStock = $item->min_stock + $leadDemand;
-        $stockSuggestion = max($targetStock - $item->stock, 0);
+        $stockSuggestion = max($targetStock - $onHand, 0);
         $projectShortageQty = (float) ProjectMaterial::query()
             ->where('master_product_id', $item->id)
-            ->whereHas('product', fn ($q) => $q->where('product_type', MasterProduct::PRODUCT_TYPE_PROJECT_MATERIAL))
+            ->whereHas('product', fn ($q) => $q->whereIn('product_type', $this->reorderStockProductTypes()))
             ->whereHas('project', fn ($q) => $q->whereIn('status', ['negosiasi', 'berjalan']))
             ->whereRaw('planned_qty > reserved_qty')
             ->sum(DB::raw('CASE WHEN planned_qty > reserved_qty THEN planned_qty - reserved_qty ELSE 0 END'));
@@ -596,7 +601,7 @@ class ERPPurchasingController extends Controller
             'id' => $item->id,
             'sku' => $item->sku,
             'name' => $item->name,
-            'stock' => $item->stock,
+            'stock' => $onHand,
             'min_stock' => $item->min_stock,
             'lead_time_days' => $item->lead_time_days,
             'total_sold' => $item->total_sold,
@@ -850,6 +855,58 @@ class ERPPurchasingController extends Controller
             });
 
         return $allocated;
+    }
+
+    /**
+     * Stok tersedia untuk logika reorder: jika ada baris master_product_warehouse_stocks,
+     * jumlahkan per produk Σ max(qty - reserved_qty, 0) lintas gudang; jika belum ada baris gudang, pakai master_products.stock.
+     *
+     * @param  Collection<int, MasterProduct>  $products
+     * @return array<int, float>
+     */
+    private function onHandByProductIdForReorder(Collection $products): array
+    {
+        if ($products->isEmpty()) {
+            return [];
+        }
+
+        $ids = $products->pluck('id')->unique()->values()->all();
+
+        $sums = MasterProductWarehouseStock::query()
+            ->whereIn('master_product_id', $ids)
+            ->select('master_product_id')
+            ->selectRaw('SUM(GREATEST(qty - reserved_qty, 0)) as available')
+            ->groupBy('master_product_id')
+            ->pluck('available', 'master_product_id');
+
+        $withWarehouseRow = MasterProductWarehouseStock::query()
+            ->whereIn('master_product_id', $ids)
+            ->distinct()
+            ->pluck('master_product_id')
+            ->flip();
+
+        $out = [];
+        foreach ($products as $item) {
+            $id = $item->id;
+            $out[$id] = $withWarehouseRow->has($id)
+                ? (float) ($sums[$id] ?? 0.0)
+                : (float) $item->stock;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Tipe master produk ber-stok yang masuk perencanaan reorder / PO (termasuk finished_goods dan project_material).
+     *
+     * @return list<string>
+     */
+    private function reorderStockProductTypes(): array
+    {
+        return [
+            MasterProduct::PRODUCT_TYPE_FINISHED_GOODS,
+            MasterProduct::PRODUCT_TYPE_PROJECT_MATERIAL,
+        ];
     }
 
     private function projectMaterialStatus(ProjectMaterial $material): string
