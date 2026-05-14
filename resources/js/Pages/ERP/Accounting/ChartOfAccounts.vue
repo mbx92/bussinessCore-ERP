@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import ConfirmModal from '@/Components/ConfirmModal.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
@@ -101,9 +102,21 @@ const submitEdit = () => {
   });
 };
 
-const confirmDeleteCoa = () => {
+const deleteCoaConfirmMessage = computed(() => {
+  const a = selectedAccount.value;
+  if (!a) {
+    return 'Apakah Anda yakin ingin menghapus akun CoA ini?';
+  }
+  return `Anda akan menghapus permanen akun ${a.code} — ${a.name}. Tindakan ini tidak dapat dibatalkan.`;
+});
+
+const openDeleteCoaConfirm = () => {
   if (!selectedAccount.value?.can_delete) return;
-  if (!window.confirm('Hapus akun CoA ini secara permanen? Tindakan ini tidak dapat dibatalkan.')) return;
+  document.getElementById('modal-confirm-delete-coa')?.showModal();
+};
+
+const executeDeleteCoa = () => {
+  if (!selectedAccount.value?.can_delete) return;
   router.delete(route('erp.accounting.coa.destroy', selectedAccount.value.id), {
     preserveScroll: true,
     onSuccess: () => {
@@ -319,12 +332,21 @@ const confirmDeleteCoa = () => {
 
         <div class="modal-action flex-wrap gap-2">
           <form method="dialog"><button class="btn btn-ghost">Tutup</button></form>
-          <button type="button" class="btn btn-error btn-outline" :disabled="!selectedAccount?.can_delete || editForm.processing" @click="confirmDeleteCoa">
+          <button type="button" class="btn btn-error btn-outline" :disabled="!selectedAccount?.can_delete || editForm.processing" @click="openDeleteCoaConfirm">
             Hapus CoA
           </button>
           <button type="button" class="btn btn-primary" :disabled="editForm.processing" @click="submitEdit">Simpan perubahan</button>
         </div>
       </div>
     </dialog>
+
+    <ConfirmModal
+      id="modal-confirm-delete-coa"
+      title="Hapus Akun CoA"
+      :message="deleteCoaConfirmMessage"
+      confirm-text="Hapus permanen"
+      confirm-class="btn-error"
+      @confirm="executeDeleteCoa"
+    />
   </AppLayout>
 </template>
