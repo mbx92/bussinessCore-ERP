@@ -33,7 +33,7 @@ class ERPAccountingUtilityController extends Controller
             ->latest('entry_date')
             ->latest('id');
 
-        if ($request->filled('company_id')) {
+        if ($request->filled('company_id') && $request->string('company_id')->toString() !== 'all') {
             $query->where('company_id', $request->integer('company_id'));
         }
 
@@ -188,41 +188,86 @@ class ERPAccountingUtilityController extends Controller
             ];
         }
 
-        $candidateCount = JournalLine::query()
-            ->where('account_id', $expenseAccount->id)
-            ->where('credit', '>', 0)
-            ->whereHas('journalEntry', function ($entry) use ($request): void {
-                $entry->whereIn('source_module', self::POS_SALE_MODULES);
-
-                if ($request->filled('company_id')) {
-                    $entry->where('company_id', $request->integer('company_id'));
-                }
-
-                if ($request->filled('date_from')) {
-                    $entry->where('entry_date', '>=', $request->string('date_from')->toString());
-                }
-
-                if ($request->filled('date_to')) {
-                    $entry->where('entry_date', '<=', $request->string('date_to')->toString());
-                }
-
-                if ($request->filled('q')) {
-                    $term = $request->string('q')->toString();
-                    $entry->where(function ($inner) use ($term): void {
-                        $inner->where('entry_no', 'like', '%'.$term.'%')
-                            ->orWhere('description', 'like', '%'.$term.'%')
-                            ->orWhere('source_module', 'like', '%'.$term.'%');
-                    });
-                }
-            })
-            ->count();
+        $candidates = $this->posChannelCorrectionCandidates($request, $expenseAccount);
+        $candidateCount = $candidates->sum('candidate_count');
 
         return [
             'can_correct' => true,
             'expense_account' => $this->accountLabel($expenseAccount),
             'payable_account' => $this->accountLabel($payableAccount),
             'candidate_count' => $candidateCount,
+            'candidates' => $candidates->take(25)->values(),
         ];
+    }
+
+    private function posChannelCorrectionCandidates(Request $request, Account $expenseAccount)
+    {
+        $query = JournalEntry::query()
+            ->with(['company:id,name', 'lines.account:id,code,name'])
+            ->whereIn('source_module', self::POS_SALE_MODULES)
+            ->whereHas('lines', fn ($line) => $line
+                ->where('account_id', $expenseAccount->id)
+                ->where('credit', '>', 0));
+
+        $this->applyJournalEntryFilters($query, $request);
+
+        return $query
+            ->latest('entry_date')
+            ->latest('id')
+            ->limit(500)
+            ->get()
+            ->map(function (JournalEntry $entry) use ($expenseAccount): ?array {
+                $creditLines = $entry->lines
+                    ->filter(fn (JournalLine $line): bool => (int) $line->account_id === (int) $expenseAccount->id && (float) $line->credit > 0)
+                    ->filter(fn (JournalLine $line): bool => $entry->lines->contains(
+                        fn (JournalLine $candidate): bool => (int) $candidate->account_id === (int) $expenseAccount->id
+                            && (float) $candidate->debit > 0
+                            && abs((float) $candidate->debit - (float) $line->credit) < 0.01
+                    ));
+
+                if ($creditLines->isEmpty()) {
+                    return null;
+                }
+
+                return [
+                    'id' => $entry->id,
+                    'entry_no' => $entry->entry_no,
+                    'entry_date' => $entry->entry_date?->format('Y-m-d'),
+                    'description' => $entry->description,
+                    'source_module' => $entry->source_module,
+                    'source_reference' => $entry->source_reference,
+                    'company_name' => $entry->company?->name ?? 'Belum ditentukan',
+                    'candidate_count' => $creditLines->count(),
+                    'candidate_amount' => (float) $creditLines->sum('credit'),
+                ];
+            })
+            ->filter()
+            ->values();
+    }
+
+    private function applyJournalEntryFilters($query, Request $request): void
+    {
+        if ($request->filled('company_id') && $request->string('company_id')->toString() !== 'all') {
+            $query->where('company_id', $request->integer('company_id'));
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('entry_date', '>=', $request->string('date_from')->toString());
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('entry_date', '<=', $request->string('date_to')->toString());
+        }
+
+        if ($request->filled('q')) {
+            $term = $request->string('q')->toString();
+            $query->where(function ($inner) use ($term): void {
+                $inner->where('entry_no', 'like', '%'.$term.'%')
+                    ->orWhere('description', 'like', '%'.$term.'%')
+                    ->orWhere('source_module', 'like', '%'.$term.'%')
+                    ->orWhere('source_reference', 'like', '%'.$term.'%');
+            });
+        }
     }
 
     private function posChannelCorrectionAccounts(): array

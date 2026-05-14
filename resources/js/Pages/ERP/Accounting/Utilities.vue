@@ -33,9 +33,14 @@ const format = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 
 const entryRows = computed(() => props.entries?.data ?? []);
+const correctionCandidates = computed(() => props.posChannelCorrection?.candidates ?? []);
 const selectableIds = computed(() => entryRows.value.map((entry) => entry.id));
+const correctionCandidateIds = computed(() => correctionCandidates.value.map((entry) => entry.id));
 const allVisibleSelected = computed(() =>
   selectableIds.value.length > 0 && selectableIds.value.every((id) => selectedEntryIds.value.includes(id)),
+);
+const allCorrectionCandidatesSelected = computed(() =>
+  correctionCandidateIds.value.length > 0 && correctionCandidateIds.value.every((id) => selectedEntryIds.value.includes(id)),
 );
 const selectedCount = computed(() => selectedEntryIds.value.length);
 
@@ -59,6 +64,15 @@ const toggleEntry = (id, checked) => {
     return;
   }
   selectedEntryIds.value = selectedEntryIds.value.filter((entryId) => entryId !== id);
+};
+
+const toggleCorrectionCandidates = (checked) => {
+  const ids = correctionCandidateIds.value;
+  if (checked) {
+    selectedEntryIds.value = [...new Set([...selectedEntryIds.value, ...ids])];
+    return;
+  }
+  selectedEntryIds.value = selectedEntryIds.value.filter((id) => !ids.includes(id));
 };
 
 const applyFilters = () => {
@@ -282,6 +296,56 @@ const submitPosChannelCorrection = () => {
           <p class="mt-3 text-xs text-base-content/50">
             Koreksi hanya memproses jurnal POS yang dicentang dan memiliki debit serta kredit pada akun beban admin channel dengan nominal sama.
           </p>
+          <div v-if="posChannelCorrection?.can_correct" class="mt-4 overflow-x-auto rounded-lg border border-base-300">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th class="w-10">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      :checked="allCorrectionCandidatesSelected"
+                      @change="toggleCorrectionCandidates($event.target.checked)"
+                    >
+                  </th>
+                  <th>No Jurnal</th>
+                  <th>Tanggal</th>
+                  <th>Usaha</th>
+                  <th>Source</th>
+                  <th>Deskripsi</th>
+                  <th class="text-right">Baris</th>
+                  <th class="text-right">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="entry in correctionCandidates" :key="`correction-${entry.id}`">
+                  <td>
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      :checked="selectedEntryIds.includes(entry.id)"
+                      @change="toggleEntry(entry.id, $event.target.checked)"
+                    >
+                  </td>
+                  <td class="font-mono text-xs">{{ entry.entry_no }}</td>
+                  <td>{{ entry.entry_date }}</td>
+                  <td>{{ entry.company_name }}</td>
+                  <td>
+                    <span class="badge badge-ghost badge-sm">{{ entry.source_module || '-' }}</span>
+                    <span v-if="entry.source_reference" class="ml-1 font-mono text-[11px] text-base-content/50">{{ entry.source_reference }}</span>
+                  </td>
+                  <td class="max-w-md">{{ entry.description || '-' }}</td>
+                  <td class="text-right">{{ entry.candidate_count }}</td>
+                  <td class="text-right font-semibold">{{ format(entry.candidate_amount) }}</td>
+                </tr>
+                <tr v-if="!correctionCandidates.length">
+                  <td colspan="8" class="py-8 text-center text-base-content/50">
+                    Tidak ada jurnal kandidat sesuai filter saat ini.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

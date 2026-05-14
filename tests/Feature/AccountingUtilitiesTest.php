@@ -133,6 +133,8 @@ class AccountingUtilitiesTest extends TestCase
                 ->where('posChannelCorrection.can_correct', true)
                 ->where('posChannelCorrection.candidate_count', 1)
                 ->where('posChannelCorrection.payable_account', '2007 - Hutang Estimasi Biaya Channel')
+                ->where('posChannelCorrection.candidates.0.entry_no', 'JE-POS-001')
+                ->where('posChannelCorrection.candidates.0.candidate_amount', 6616)
                 ->etc());
 
         $this
