@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\ERP\Accounting\Models\Account;
+use App\ERP\Accounting\Models\CoaSetting;
 use App\ERP\Accounting\Models\JournalEntry;
 use App\ERP\Core\Models\Company;
 use App\Models\User;
@@ -66,6 +67,93 @@ class AccountingUtilitiesTest extends TestCase
         $this->assertDatabaseHas('journal_entries', [
             'id' => $entry->id,
             'company_id' => $companyB->id,
+        ]);
+    }
+
+    public function test_accounting_utilities_can_correct_pos_channel_payable_from_latest_coa_setting(): void
+    {
+        $this->disableErpMiddleware();
+
+        $user = User::factory()->create();
+        $company = Company::query()->create(['name' => 'Usaha 1', 'is_active' => true]);
+        $cash = Account::query()->updateOrCreate(['code' => '1001'], [
+            'code' => '1001',
+            'name' => 'Kas',
+            'type' => 'asset',
+            'normal_balance' => 'debit',
+            'is_active' => true,
+        ]);
+        $revenue = Account::query()->updateOrCreate(['code' => '4002'], [
+            'code' => '4002',
+            'name' => 'Pendapatan Penjualan POS',
+            'type' => 'revenue',
+            'normal_balance' => 'credit',
+            'is_active' => true,
+        ]);
+        $expense = Account::query()->updateOrCreate(['code' => '5014'], [
+            'code' => '5014',
+            'name' => 'Beban Marketing & Iklan',
+            'type' => 'expense',
+            'normal_balance' => 'debit',
+            'is_active' => true,
+        ]);
+        $payable = Account::query()->updateOrCreate(['code' => '2007'], [
+            'code' => '2007',
+            'name' => 'Hutang Estimasi Biaya Channel',
+            'type' => 'liability',
+            'normal_balance' => 'credit',
+            'is_active' => true,
+        ]);
+
+        CoaSetting::query()->create(['key' => 'pos_sale_sales_channel_admin_expense', 'account_id' => $expense->id]);
+        CoaSetting::query()->create(['key' => 'pos_sale_sales_channel_admin_payable', 'account_id' => $payable->id]);
+
+        $entry = JournalEntry::query()->create([
+            'company_id' => $company->id,
+            'entry_no' => 'JE-POS-001',
+            'entry_date' => '2026-05-14',
+            'description' => 'Penjualan POS TRX-001',
+            'status' => 'posted',
+            'source_module' => 'pos_sale',
+            'source_reference' => 'TRX-001',
+        ]);
+        $entry->lines()->createMany([
+            ['account_id' => $cash->id, 'debit' => 60000, 'credit' => 0],
+            ['account_id' => $revenue->id, 'debit' => 0, 'credit' => 60000],
+            ['account_id' => $expense->id, 'debit' => 6616, 'credit' => 0],
+            ['account_id' => $expense->id, 'debit' => 0, 'credit' => 6616],
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('erp.accounting.utilities', ['q' => 'JE-POS-001']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ERP/Accounting/Utilities')
+                ->where('posChannelCorrection.can_correct', true)
+                ->where('posChannelCorrection.candidate_count', 1)
+                ->where('posChannelCorrection.payable_account', '2007 - Hutang Estimasi Biaya Channel')
+                ->etc());
+
+        $this
+            ->actingAs($user)
+            ->post(route('erp.accounting.utilities.correct-pos-channel-payable'), [
+                'journal_entry_ids' => [$entry->id],
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('journal_lines', [
+            'journal_entry_id' => $entry->id,
+            'account_id' => $expense->id,
+            'debit' => '6616.00',
+            'credit' => '0.00',
+        ]);
+        $this->assertDatabaseHas('journal_lines', [
+            'journal_entry_id' => $entry->id,
+            'account_id' => $payable->id,
+            'debit' => '0.00',
+            'credit' => '6616.00',
         ]);
     }
 

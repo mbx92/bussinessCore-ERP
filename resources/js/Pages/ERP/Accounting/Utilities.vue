@@ -10,6 +10,7 @@ const props = defineProps({
   entries: Object,
   companySummaries: Array,
   filters: Object,
+  posChannelCorrection: Object,
 });
 
 const filters = reactive({
@@ -22,6 +23,9 @@ const filters = reactive({
 const selectedEntryIds = ref([]);
 const moveForm = useForm({
   target_company_id: '',
+  journal_entry_ids: [],
+});
+const correctionForm = useForm({
   journal_entry_ids: [],
 });
 
@@ -86,6 +90,17 @@ const submitMove = () => {
     onSuccess: () => {
       selectedEntryIds.value = [];
       moveForm.reset('target_company_id', 'journal_entry_ids');
+    },
+  });
+};
+
+const submitPosChannelCorrection = () => {
+  correctionForm.journal_entry_ids = selectedEntryIds.value;
+  correctionForm.post(route('erp.accounting.utilities.correct-pos-channel-payable'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      selectedEntryIds.value = [];
+      correctionForm.reset('journal_entry_ids');
     },
   });
 };
@@ -227,6 +242,47 @@ const submitMove = () => {
           :paginator="entries"
           @update:per-page="(n) => router.get(route('erp.accounting.utilities'), { ...filters, per_page: n }, { preserveState: true, replace: true })"
         />
+      </div>
+
+      <div class="ocn-panel">
+        <div class="ocn-panel__head flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 class="ocn-panel__title">Koreksi COA POS admin channel</h2>
+            <p class="ocn-panel__desc mt-1">
+              Mengganti baris kredit biaya admin channel lama ke akun hutang estimasi sesuai Pengaturan COA terakhir.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-warning btn-sm"
+            :disabled="!posChannelCorrection?.can_correct || selectedCount === 0 || correctionForm.processing"
+            @click="submitPosChannelCorrection"
+          >
+            {{ correctionForm.processing ? 'Mengoreksi...' : 'Koreksi jurnal dipilih' }}
+          </button>
+        </div>
+        <div class="card-body pt-0">
+          <div v-if="posChannelCorrection?.can_correct" class="grid gap-3 md:grid-cols-3">
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Akun beban</p>
+              <p class="mt-1 text-sm font-semibold">{{ posChannelCorrection.expense_account }}</p>
+            </div>
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Akun hutang tujuan</p>
+              <p class="mt-1 text-sm font-semibold">{{ posChannelCorrection.payable_account }}</p>
+            </div>
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Kandidat sesuai filter</p>
+              <p class="mt-1 text-sm font-semibold">{{ posChannelCorrection.candidate_count ?? 0 }} baris kredit</p>
+            </div>
+          </div>
+          <div v-else class="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-base-content/70">
+            {{ posChannelCorrection?.message || 'Pengaturan COA belum siap untuk koreksi.' }}
+          </div>
+          <p class="mt-3 text-xs text-base-content/50">
+            Koreksi hanya memproses jurnal POS yang dicentang dan memiliki debit serta kredit pada akun beban admin channel dengan nominal sama.
+          </p>
+        </div>
       </div>
     </div>
   </AppLayout>
