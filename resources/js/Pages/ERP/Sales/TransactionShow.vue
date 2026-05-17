@@ -136,7 +136,8 @@ const printReceipt = async () => {
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-9">
+      <div class="space-y-3">
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
           <p class="text-[11px] uppercase text-base-content/50">Channel</p>
           <p class="mt-1 font-semibold">{{ detail.sales_channel_label || detail.sales_channel || '-' }}</p>
@@ -157,10 +158,12 @@ const printReceipt = async () => {
           <p class="text-[11px] uppercase text-base-content/50">Biaya lain (ditagih)</p>
           <p class="mt-1 font-semibold">{{ format(detail.additional_fee) }}</p>
         </div>
-        <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
-          <p class="text-[11px] uppercase text-base-content/50">Biaya admin channel (jurnal)</p>
-          <p class="mt-1 font-semibold">{{ format(detail.sales_channel_admin_fee ?? 0) }}</p>
         </div>
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+            <p class="text-[11px] uppercase text-base-content/50">Biaya admin channel (jurnal)</p>
+            <p class="mt-1 font-semibold">{{ format(detail.sales_channel_admin_fee ?? 0) }}</p>
+          </div>
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
           <p class="text-[11px] uppercase text-base-content/50">Grand Total</p>
           <p class="mt-1 font-semibold text-primary">{{ format(detail.grand_total) }}</p>
@@ -172,6 +175,7 @@ const printReceipt = async () => {
         <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
           <p class="text-[11px] uppercase text-base-content/50">Kembalian</p>
           <p class="mt-1 font-semibold text-success">{{ format(detail.change_amount) }}</p>
+        </div>
         </div>
       </div>
 

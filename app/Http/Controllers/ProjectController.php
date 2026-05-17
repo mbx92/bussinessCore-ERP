@@ -29,7 +29,7 @@ class ProjectController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Project::with(['payments'])
+        $query = Project::with(['payments', 'materials', 'convertedBudget.items'])
             ->withSum('cashIns as paid_amount', 'amount')
             ->when($request->search, fn ($q) => $q->where('name', 'ilike', "%{$request->search}%")
                 ->orWhere('client_name', 'ilike', "%{$request->search}%"))
@@ -43,7 +43,7 @@ class ProjectController extends Controller
                 'client_name' => $p->client_name,
                 'project_type' => $p->project_type,
                 'status' => $p->status,
-                'total_value' => (float) $p->total_value,
+                'total_value' => $p->resolveListTotalValue(),
                 'paid_amount' => (float) ($p->paid_amount ?? 0),
                 'started_at' => $p->started_at?->format('Y-m-d'),
             ]);
@@ -151,8 +151,10 @@ class ProjectController extends Controller
                 'project_type' => $project->project_type,
                 'total_value' => (float) $project->total_value,
                 'status' => $project->status,
+                'created_at' => $project->created_at?->format('Y-m-d'),
                 'started_at' => $project->started_at?->format('Y-m-d'),
                 'finished_at' => $project->finished_at?->format('Y-m-d'),
+                'invoiced_at' => $project->invoiced_at?->format('Y-m-d'),
                 'description' => $project->description,
                 'project_type' => $project->project_type,
                 'payments' => $project->payments->map(fn ($p) => [
@@ -189,6 +191,7 @@ class ProjectController extends Controller
                     'base_pay' => (float) $d->base_pay,
                     'bonus' => (float) $d->bonus,
                     'total_pay' => (float) $d->total_pay,
+                    'paid_at' => $d->paid_at?->format('Y-m-d'),
                 ]),
                 'tasks' => $project->tasks->map(fn ($task) => [
                     'id' => $task->id,

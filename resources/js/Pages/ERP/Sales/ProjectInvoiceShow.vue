@@ -5,6 +5,7 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   invoice: Object,
@@ -12,6 +13,7 @@ const props = defineProps({
 });
 
 const { format, parse, formatInput } = useCurrency();
+const { formatDate } = useDateFormat();
 const paymentSearch = ref('');
 const paymentAmountInput = ref('');
 const editingPayment = ref(null);
@@ -148,7 +150,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
         </article>
         <article class="rounded-2xl border border-indigo-800/50 bg-gradient-to-br from-indigo-800 to-violet-950 p-5 text-white shadow-xl">
           <p class="text-xs font-semibold uppercase tracking-wide text-indigo-100/70">Tanggal Selesai</p>
-          <p class="mt-3 text-xl font-bold">{{ invoice.finished_at || '-' }}</p>
+          <p class="mt-3 text-xl font-bold whitespace-nowrap">{{ formatDate(invoice.finished_at) }}</p>
         </article>
       </div>
 
@@ -163,7 +165,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
               <div class="text-base-content/60">Kontak</div><div>{{ invoice.client_contact || '-' }}</div>
               <div class="text-base-content/60">Tipe</div><div>{{ invoice.project_type }}</div>
               <div class="text-base-content/60">Mulai</div><div>{{ invoice.started_at || '-' }}</div>
-              <div class="text-base-content/60">Selesai</div><div>{{ invoice.finished_at || '-' }}</div>
+              <div class="text-base-content/60">Selesai</div><div class="whitespace-nowrap">{{ formatDate(invoice.finished_at) }}</div>
               <div class="text-base-content/60">Deskripsi</div><div>{{ invoice.description || '-' }}</div>
             </div>
           </div>
@@ -184,6 +186,42 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
               </div>
               <div v-if="!invoice.payments.length" class="rounded-lg border border-base-300 p-4 text-center text-sm text-base-content/50">Tidak ada termin.</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ocn-panel">
+        <div class="ocn-panel__head">
+          <h2 class="ocn-panel__title">Item tagihan</h2>
+        </div>
+        <div class="card-body">
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th class="text-right">Qty</th>
+                  <th>UoM</th>
+                  <th class="text-right">Harga</th>
+                  <th class="text-right">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(item, index) in (invoice.line_items || [])" :key="index">
+                  <td>
+                    <p class="font-medium">{{ item.name }}</p>
+                    <p v-if="item.description" class="text-xs text-base-content/60">{{ item.description }}</p>
+                  </td>
+                  <td class="text-right">{{ item.qty }}</td>
+                  <td>{{ item.uom }}</td>
+                  <td class="text-right">{{ format(item.unit_price) }}</td>
+                  <td class="text-right font-semibold">{{ format(item.subtotal) }}</td>
+                </tr>
+                <tr v-if="!(invoice.line_items || []).length">
+                  <td colspan="5" class="text-center text-sm text-base-content/50">Belum ada item.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

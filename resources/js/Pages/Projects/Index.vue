@@ -5,6 +5,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Link, router, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 import { ArrowLeftIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -13,6 +14,7 @@ const props = defineProps({
     crm_customers: { type: Array, default: () => [] },
 });
 const { format } = useCurrency();
+const { formatDate } = useDateFormat();
 
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? '');
@@ -146,7 +148,7 @@ const submitProject = () => {
                                     <th>Tipe</th>
                                     <th>Status</th>
                                     <th>Nilai Kontrak</th>
-                                    <th>Mulai</th>
+                                    <th class="whitespace-nowrap">Mulai</th>
                                     <th>Pembayaran</th>
                                 </tr>
                             </thead>
@@ -166,7 +168,7 @@ const submitProject = () => {
                                     </td>
                                     <td><StatusBadge :status="p.status" /></td>
                                     <td class="font-medium">{{ format(p.total_value) }}</td>
-                                    <td class="text-sm text-base-content/70">{{ p.started_at ?? '-' }}</td>
+                                    <td class="whitespace-nowrap text-sm text-base-content/70">{{ formatDate(p.started_at) }}</td>
                                     <td>
                                         <div class="flex items-center gap-2">
                                             <progress class="progress progress-success w-20" :value="p.paid_amount" :max="p.total_value || 1" />

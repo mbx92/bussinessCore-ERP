@@ -18,7 +18,6 @@ use App\Models\PaymentMethod;
 use App\Models\PosSale;
 use App\Models\ProductStockMovement;
 use App\Models\Project;
-use App\Models\ProjectBudget;
 use App\Models\User;
 use App\Services\LanEscPosPrinter;
 use App\Services\ThermalPosReceiptData;
@@ -108,10 +107,7 @@ class ERPSalesController extends Controller
             'products' => $products,
             'price_channels' => $this->priceChannels(),
             'fullscreen' => $request->boolean('fullscreen'),
-            'payment_methods' => PaymentMethod::query()
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->get(['id', 'code', 'name']),
+            'payment_methods' => $this->posPaymentMethodsPayload(),
         ]);
     }
 
@@ -198,10 +194,7 @@ class ERPSalesController extends Controller
                 ]),
                 'requires_high_authorization' => ! (bool) Auth::user()?->hasRole('admin'),
             ],
-            'payment_methods' => PaymentMethod::query()
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->get(['id', 'name']),
+            'payment_methods' => $this->posPaymentMethodsPayload(),
         ]);
     }
 
@@ -414,8 +407,16 @@ class ERPSalesController extends Controller
             'items.*.uom' => 'nullable|string|max:20',
         ]);
 
-        $paymentMethod = PaymentMethod::query()->findOrFail((int) $validated['payment_method_id']);
+        $paymentMethod = PaymentMethod::query()
+            ->with('salesChannelAssignments')
+            ->findOrFail((int) $validated['payment_method_id']);
         $salesChannel = $validated['sales_channel'];
+
+        if (! $paymentMethod->isAvailableForSalesChannel($salesChannel)) {
+            throw ValidationException::withMessages([
+                'payment_method_id' => 'Metode pembayaran tidak tersedia untuk sales channel ini.',
+            ]);
+        }
         $marketplaceOrderCode = $salesChannel === 'marketplace'
             ? trim((string) ($validated['marketplace_order_code'] ?? ''))
             : null;
@@ -821,6 +822,26 @@ class ERPSalesController extends Controller
         return $this->computeMappedPrice($basePrice, (float) $mapping->multiplier, $mapping->price_operation ?: 'multiply');
     }
 
+    /**
+     * @return array<int, array{id: int, code: string, name: string, sales_channels: list<string>}>
+     */
+    private function posPaymentMethodsPayload(): array
+    {
+        return PaymentMethod::query()
+            ->with('salesChannelAssignments')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'code', 'name'])
+            ->map(fn (PaymentMethod $method) => [
+                'id' => $method->id,
+                'code' => $method->code,
+                'name' => $method->name,
+                'sales_channels' => $method->salesChannelsList(),
+            ])
+            ->values()
+            ->all();
+    }
+
     private function priceChannelLabel(string $key): string
     {
         return collect($this->priceChannels())->firstWhere('key', $key)['label'] ?? strtoupper($key);
@@ -949,6 +970,7 @@ class ERPSalesController extends Controller
     public function projectInvoices(Request $request): Response
     {
         $invoices = Project::query()
+            ->with(['convertedBudget.items', 'materials'])
             ->withSum('cashIns as paid_amount', 'amount')
             ->where('status', 'selesai')
             ->latest('finished_at')
@@ -970,7 +992,7 @@ class ERPSalesController extends Controller
     {
         abort_unless($project->status === 'selesai', 404);
 
-        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod']);
+        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod', 'materials.product', 'convertedBudget.items']);
         $project->loadSum('cashIns as paid_amount', 'amount');
         $project->invoice_number = $this->ensureProjectInvoiceNumber($project);
 
@@ -1002,6 +1024,7 @@ class ERPSalesController extends Controller
                         'note' => $cashIn->note,
                         'creator_name' => $cashIn->creator?->name,
                     ]),
+                'line_items' => $project->resolveInvoiceLineItems()->values()->all(),
             ],
             'paymentMethods' => PaymentMethod::query()
                 ->where('status', 'active')
@@ -1115,12 +1138,16 @@ class ERPSalesController extends Controller
         abort_unless($project->status === 'selesai', 404);
 
         $project->invoice_number = $this->ensureProjectInvoiceNumber($project);
-        $project->load(['payments', 'cashIns']);
+        $project->load(['payments', 'cashIns', 'materials.product', 'convertedBudget.items']);
         $project->loadSum('cashIns as paid_amount', 'amount');
+
+        $lineItems = $project->resolveInvoiceLineItems();
 
         $pdf = Pdf::loadView('pdf.project-invoice', [
             'project' => $project,
             'invoice' => $this->mapProjectInvoice($project),
+            'lineItems' => $lineItems,
+            'lineItemsSubtotal' => $lineItems->sum('subtotal'),
             'brand' => $this->pdfBrand(),
             'generatedAt' => now(),
         ])->setPaper('a4');
@@ -1133,11 +1160,11 @@ class ERPSalesController extends Controller
         abort_unless($project->status === 'selesai', 404);
 
         $project->invoice_number = $this->ensureProjectInvoiceNumber($project);
-        $project->load(['materials.product']);
+        $project->load(['materials.product', 'convertedBudget.items']);
         $project->loadSum('cashIns as paid_amount', 'amount');
 
         $invoice = $this->mapProjectInvoice($project);
-        $items = $this->projectSalesNoteItems($project);
+        $items = $project->resolveInvoiceLineItems();
 
         $pdf = Pdf::loadView('pdf.project-sales-note', [
             'project' => $project,
@@ -1190,7 +1217,7 @@ class ERPSalesController extends Controller
     private function mapProjectInvoice(Project $project): array
     {
         $paidAmount = (float) ($project->paid_amount ?? $project->cashIns()->sum('amount'));
-        $amount = (float) $project->total_value;
+        $amount = $project->resolveInvoiceAmount();
         $remaining = max($amount - $paidAmount, 0);
 
         return [
@@ -1205,81 +1232,6 @@ class ERPSalesController extends Controller
             'finished_at' => $project->finished_at?->format('Y-m-d'),
             'created_at' => $project->created_at?->format('Y-m-d'),
         ];
-    }
-
-    private function projectSalesNoteItems(Project $project)
-    {
-        $budget = ProjectBudget::query()
-            ->with('items')
-            ->where('converted_project_id', $project->id)
-            ->first();
-
-        $budgetItems = $budget?->items?->isNotEmpty()
-            ? $budget->items->map(fn ($item): array => [
-                'name' => (string) $item->name,
-                'description' => trim(collect([$item->item_type, $item->notes])->filter()->implode(' · ')) ?: 'Item budget project',
-                'qty' => (float) $item->qty,
-                'uom' => (string) ($item->uom ?: 'unit'),
-                'unit_price' => (float) $item->unit_price,
-                'subtotal' => (float) $item->qty * (float) $item->unit_price,
-            ])->values()
-            : collect();
-
-        if ($budgetItems->isEmpty()) {
-            $budgetItems = collect($budget?->cctv_items ?? [])
-            ->filter(fn ($item) => is_array($item) && trim((string) ($item['name'] ?? '')) !== '')
-            ->map(function (array $item): array {
-                $qty = (float) ($item['qty'] ?? 0);
-                $unitPrice = (float) ($item['unit_price'] ?? 0);
-
-                return [
-                    'name' => (string) $item['name'],
-                    'description' => 'Item dari budget project',
-                    'qty' => $qty,
-                    'uom' => 'unit',
-                    'unit_price' => $unitPrice,
-                    'subtotal' => $qty * $unitPrice,
-                ];
-            })
-            ->values();
-        }
-
-        if ($budgetItems->isNotEmpty()) {
-            return $budgetItems;
-        }
-
-        $materialItems = $project->materials
-            ->filter(fn ($material) => $material->product !== null)
-            ->map(function ($material): array {
-                $qty = (float) $material->planned_qty;
-                $unitPrice = (float) ($material->product?->selling_price ?? 0);
-
-                return [
-                    'name' => (string) ($material->product?->name ?? 'Material project'),
-                    'description' => trim(implode(' · ', array_filter([
-                        $material->product?->sku,
-                        $material->notes,
-                    ]))) ?: 'Material project',
-                    'qty' => $qty,
-                    'uom' => (string) ($material->product?->uom ?? 'unit'),
-                    'unit_price' => $unitPrice,
-                    'subtotal' => $qty * $unitPrice,
-                ];
-            })
-            ->values();
-
-        if ($materialItems->isNotEmpty()) {
-            return $materialItems;
-        }
-
-        return collect([[
-            'name' => 'Nilai project '.$project->name,
-            'description' => $project->description ?: 'Pekerjaan project sesuai kesepakatan.',
-            'qty' => 1,
-            'uom' => 'project',
-            'unit_price' => (float) $project->total_value,
-            'subtotal' => (float) $project->total_value,
-        ]]);
     }
 
     private function invoiceNumber(Project $project): string

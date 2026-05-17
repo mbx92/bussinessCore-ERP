@@ -7,6 +7,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
     project: Object,
@@ -19,6 +20,7 @@ const props = defineProps({
     cash_category_options: Object,
 });
 const { format } = useCurrency();
+const { formatDate } = useDateFormat();
 const activeTab = ref('info');
 const deletingMaterialId = ref(null);
 const createFolderForm = useForm({});
@@ -364,19 +366,12 @@ const ganttPhases = computed(() => {
     if (!props.project?.started_at || !props.project?.finished_at) return [];
     const start = new Date(props.project.started_at);
     const end = new Date(props.project.finished_at);
-    const templates = props.project.project_type === 'cctv_installation'
-        ? [
-            { name: 'Survey & Design', from: 0, to: 20 },
-            { name: 'Procurement', from: 20, to: 45 },
-            { name: 'Installation', from: 45, to: 85 },
-            { name: 'Testing & Handover', from: 85, to: 100 },
-        ]
-        : [
-            { name: 'Discovery', from: 0, to: 20 },
-            { name: 'Development', from: 20, to: 75 },
-            { name: 'UAT', from: 75, to: 90 },
-            { name: 'Go-Live', from: 90, to: 100 },
-        ];
+    const templates = [
+        { name: 'Discovery', from: 0, to: 20 },
+        { name: 'Development', from: 20, to: 75 },
+        { name: 'UAT', from: 75, to: 90 },
+        { name: 'Go-Live', from: 90, to: 100 },
+    ];
 
     const totalMs = Math.max(end.getTime() - start.getTime(), 1);
     return templates.map((phase) => {
@@ -390,6 +385,58 @@ const ganttPhases = computed(() => {
             width: `${phase.to - phase.from}%`,
         };
     });
+});
+
+const cctvLifecycleTimeline = computed(() => {
+    if (!isCctvProject.value) return [];
+
+    const p = props.project;
+    const steps = [];
+
+    const addStep = (key, label, date, detail, done) => {
+        steps.push({
+            key,
+            label,
+            date: date || null,
+            detail: detail || null,
+            done: !!done,
+        });
+    };
+
+    addStep('created', 'Project dibuat & data diinput', p.created_at, p.client_name ? `Klien: ${p.client_name}` : null, !!p.created_at);
+    addStep('started', 'Project mulai berjalan', p.started_at, null, !!p.started_at);
+    addStep('finished', 'Project selesai', p.finished_at, null, !!p.finished_at);
+
+    const invoiceReady = !!(p.invoiced_at || p.invoice?.number);
+    addStep(
+        'invoice',
+        'Invoice project diterbitkan',
+        p.invoiced_at,
+        p.invoice?.number ? `No. ${p.invoice.number}` : null,
+        invoiceReady,
+    );
+
+    for (const term of p.payments ?? []) {
+        addStep(
+            `term-${term.id}`,
+            `Pembayaran invoice — termin ${term.term_number}`,
+            term.paid_at,
+            `${term.percentage}% · ${format(term.amount)}`,
+            !!term.paid_at,
+        );
+    }
+
+    for (const dist of p.team_distributions ?? []) {
+        addStep(
+            `staff-${dist.id}`,
+            `Pembayaran tim — ${dist.user_name}`,
+            dist.paid_at,
+            `${dist.role_in_project || 'Anggota'} · ${format(dist.total_pay)}`,
+            !!dist.paid_at,
+        );
+    }
+
+    return steps;
 });
 
 // Expense forms
@@ -624,10 +671,45 @@ const deleteProject = () => {
                     </div>
                 </div>
 
-                <div class="ocn-panel">
+                <div v-if="isCctvProject" class="ocn-panel">
+                    <div class="ocn-panel__head">
+                        <h2 class="ocn-panel__title">Timeline project</h2>
+                        <p class="ocn-panel__desc">Dari pembuatan project hingga pembayaran invoice dan tim.</p>
+                    </div>
+                    <div class="card-body">
+                        <ul class="timeline timeline-vertical timeline-snap-icon">
+                            <li v-for="(step, index) in cctvLifecycleTimeline" :key="step.key">
+                                <div v-if="index > 0" class="timeline-middle">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5 text-base-content/30">
+                                        <path fill-rule="evenodd" d="M10 3a.75.75 0 01.75.75v13.5a.75.75 0 01-1.5 0V3.75A.75.75 0 0110 3z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="timeline-start mb-8 whitespace-nowrap text-xs font-medium text-base-content/60 md:text-end">
+                                    {{ step.date ? formatDate(step.date) : '—' }}
+                                </div>
+                                <div class="timeline-middle">
+                                    <span
+                                        class="flex h-3.5 w-3.5 items-center justify-center rounded-full ring-4 ring-base-100"
+                                        :class="step.done ? 'bg-success' : 'bg-base-300'"
+                                    />
+                                </div>
+                                <div class="timeline-end mb-8 max-w-md md:mb-10">
+                                    <div class="rounded-lg border border-base-200 bg-base-100 px-3 py-2 shadow-sm">
+                                        <p class="font-semibold">{{ step.label }}</p>
+                                        <p v-if="step.detail" class="mt-0.5 text-sm text-base-content/60">{{ step.detail }}</p>
+                                        <span v-if="!step.done" class="badge badge-ghost badge-sm mt-2">Menunggu</span>
+                                    </div>
+                                </div>
+                                <hr v-if="index < cctvLifecycleTimeline.length - 1" />
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div v-else class="ocn-panel">
                     <div class="ocn-panel__head">
                         <h2 class="ocn-panel__title">Gantt timeline</h2>
-                        <p class="ocn-panel__desc">Otomatis dari tanggal mulai–selesai dan tipe project.</p>
+                        <p class="ocn-panel__desc">Otomatis dari tanggal mulai–selesai project.</p>
                     </div>
                     <div class="card-body">
                         <div v-if="project.started_at && project.finished_at" class="mt-1 space-y-3">

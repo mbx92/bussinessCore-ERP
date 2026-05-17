@@ -377,9 +377,12 @@ class ERPAdministrationMasterDataController extends Controller
     {
         return Inertia::render('ERP/Admin/PaymentMethods', [
             'paymentMethods' => PaymentMethod::query()
+                ->with('salesChannelAssignments')
                 ->orderBy('name')
                 ->paginate($this->resolvedPerPage($request))
+                ->through(fn (PaymentMethod $method) => $this->formatPaymentMethodForAdmin($method))
                 ->withQueryString(),
+            'priceChannels' => PaymentMethod::salesChannelOptions(),
             'filters' => $this->filtersWithPerPage($request, []),
         ]);
     }
@@ -390,11 +393,17 @@ class ERPAdministrationMasterDataController extends Controller
             'code' => 'required|string|max:30|alpha_dash|unique:payment_methods,code',
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
+            'sales_channels' => ['required', 'array', 'min:1'],
+            'sales_channels.*' => ['required', 'string', Rule::in(PaymentMethod::SALES_CHANNEL_KEYS)],
             'status' => 'required|in:active,inactive',
         ]);
 
+        $channels = $validated['sales_channels'];
+        unset($validated['sales_channels']);
         $validated['code'] = strtolower($validated['code']);
-        PaymentMethod::query()->create($validated);
+
+        $method = PaymentMethod::query()->create($validated);
+        $method->syncSalesChannels($channels);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Metode pembayaran berhasil ditambahkan.']);
     }
@@ -405,13 +414,39 @@ class ERPAdministrationMasterDataController extends Controller
             'code' => 'required|string|max:30|alpha_dash|unique:payment_methods,code,'.$paymentMethod->id,
             'name' => 'required|string|max:100',
             'description' => 'nullable|string|max:255',
+            'sales_channels' => ['required', 'array', 'min:1'],
+            'sales_channels.*' => ['required', 'string', Rule::in(PaymentMethod::SALES_CHANNEL_KEYS)],
             'status' => 'required|in:active,inactive',
         ]);
 
+        $channels = $validated['sales_channels'];
+        unset($validated['sales_channels']);
         $validated['code'] = strtolower($validated['code']);
         $paymentMethod->update($validated);
+        $paymentMethod->syncSalesChannels($channels);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Metode pembayaran berhasil diperbarui.']);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatPaymentMethodForAdmin(PaymentMethod $method): array
+    {
+        $channels = $method->salesChannelsList();
+
+        return [
+            'id' => $method->id,
+            'code' => $method->code,
+            'name' => $method->name,
+            'description' => $method->description,
+            'sales_channels' => $channels,
+            'sales_channel_labels' => array_map(
+                fn (string $key) => PaymentMethod::salesChannelLabel($key),
+                $channels
+            ),
+            'status' => $method->status,
+        ];
     }
 
     public function thermalPrinter(): RedirectResponse

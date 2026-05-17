@@ -70,72 +70,66 @@ const paidPayables = computed(() => (props.payables ?? []).filter((row) => Numbe
         </div>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-3">
-        <div class="stats shadow">
-          <div class="stat py-3">
-            <div class="stat-title text-sm">Hutang Supplier</div>
-            <div class="stat-value text-xl text-warning">{{ format(summary?.outstanding_total ?? 0) }}</div>
-          </div>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+          <p class="text-[11px] uppercase text-base-content/50">Hutang Supplier</p>
+          <p class="mt-1 font-semibold tabular-nums text-warning">{{ format(summary?.outstanding_total ?? 0) }}</p>
         </div>
-        <div class="stats shadow">
-          <div class="stat py-3">
-            <div class="stat-title text-sm">Sudah Dibayar</div>
-            <div class="stat-value text-xl text-success">{{ format(summary?.paid_total ?? 0) }}</div>
-          </div>
+        <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm">
+          <p class="text-[11px] uppercase text-base-content/50">Sudah Dibayar</p>
+          <p class="mt-1 font-semibold tabular-nums text-success">{{ format(summary?.paid_total ?? 0) }}</p>
         </div>
-        <div class="stats shadow">
-          <div class="stat py-3">
-            <div class="stat-title text-sm">Bill Terbuka</div>
-            <div class="stat-value text-xl">{{ summary?.open_count ?? 0 }}</div>
-          </div>
+        <div class="rounded-xl border border-base-300 bg-base-100 p-3 shadow-sm col-span-2 sm:col-span-1">
+          <p class="text-[11px] uppercase text-base-content/50">Bill Terbuka</p>
+          <p class="mt-1 font-semibold tabular-nums">{{ summary?.open_count ?? 0 }}</p>
         </div>
       </div>
 
-      <div class="grid gap-4 lg:grid-cols-3">
-        <div class="ocn-panel">
-          <div class="ocn-panel__head">
-            <h2 class="ocn-panel__title">Pembayaran invoice project</h2>
-            <p class="ocn-panel__desc">Kelola penerimaan pembayaran dari client dan status pelunasan invoice.</p>
-          </div>
-          <div class="card-body">
-            <p class="text-sm text-base-content/70">
+      <div class="grid items-stretch gap-4 lg:grid-cols-3">
+        <article class="ocn-panel flex h-full flex-col">
+          <header class="ocn-panel__head shrink-0">
+            <h2 class="ocn-panel__title min-h-[2.75rem] line-clamp-2">Pembayaran invoice project</h2>
+            <p class="ocn-panel__desc min-h-[2.5rem] line-clamp-2">Kelola penerimaan pembayaran dari client dan status pelunasan invoice.</p>
+          </header>
+          <div class="card-body flex min-h-0 flex-1 flex-col">
+            <p class="flex-1 text-sm leading-relaxed text-base-content/70">
               Input pembayaran, edit nominal, dan cetak kwitansi invoice project.
             </p>
-            <div class="mt-4">
-              <Link :href="route('erp.sales.project-invoices')" class="btn btn-primary btn-sm">Buka Invoice Project</Link>
-            </div>
+            <footer class="mt-4 shrink-0 border-t border-base-200/80 pt-4">
+              <Link :href="route('erp.sales.project-invoices')" class="btn btn-primary btn-sm w-full">Buka Invoice Project</Link>
+            </footer>
           </div>
-        </div>
+        </article>
 
-        <div class="ocn-panel">
-          <div class="ocn-panel__head">
-            <h2 class="ocn-panel__title">Pembayaran anggota tim</h2>
-            <p class="ocn-panel__desc">Pantau distribusi pembayaran anggota berdasarkan project dan periode.</p>
-          </div>
-          <div class="card-body">
-            <p class="text-sm text-base-content/70">
+        <article class="ocn-panel flex h-full flex-col">
+          <header class="ocn-panel__head shrink-0">
+            <h2 class="ocn-panel__title min-h-[2.75rem] line-clamp-2">Pembayaran anggota tim</h2>
+            <p class="ocn-panel__desc min-h-[2.5rem] line-clamp-2">Pantau distribusi pembayaran anggota berdasarkan project dan periode.</p>
+          </header>
+          <div class="card-body flex min-h-0 flex-1 flex-col">
+            <p class="flex-1 text-sm leading-relaxed text-base-content/70">
               Akses laporan pembayaran anggota untuk validasi pembagian tim dan proses approval internal.
             </p>
-            <div class="mt-4">
-              <Link :href="route('erp.accounting.payments.member')" class="btn btn-primary btn-sm">Buka Pembayaran Anggota</Link>
-            </div>
+            <footer class="mt-4 shrink-0 border-t border-base-200/80 pt-4">
+              <Link :href="route('erp.accounting.payments.member')" class="btn btn-primary btn-sm w-full">Buka Pembayaran Anggota</Link>
+            </footer>
           </div>
-        </div>
+        </article>
 
-        <div class="ocn-panel">
-          <div class="ocn-panel__head">
-            <h2 class="ocn-panel__title">Pembayaran supplier</h2>
-            <p class="ocn-panel__desc">Pelunasan PO yang sudah menjadi hutang usaha.</p>
-          </div>
-          <div class="card-body">
-            <p class="text-sm text-base-content/70">
+        <article class="ocn-panel flex h-full flex-col">
+          <header class="ocn-panel__head shrink-0">
+            <h2 class="ocn-panel__title min-h-[2.75rem] line-clamp-2">Pembayaran supplier</h2>
+            <p class="ocn-panel__desc min-h-[2.5rem] line-clamp-2">Pelunasan PO yang sudah menjadi hutang usaha.</p>
+          </header>
+          <div class="card-body flex min-h-0 flex-1 flex-col">
+            <p class="flex-1 text-sm leading-relaxed text-base-content/70">
               Pembayaran akan menjurnal debit Hutang Usaha dan kredit Kas/Bank.
             </p>
-            <div class="mt-4">
-              <a href="#supplier-payables" class="btn btn-primary btn-sm">Lihat Hutang Supplier</a>
-            </div>
+            <footer class="mt-4 shrink-0 border-t border-base-200/80 pt-4">
+              <a href="#supplier-payables" class="btn btn-primary btn-sm w-full">Lihat Hutang Supplier</a>
+            </footer>
           </div>
-        </div>
+        </article>
       </div>
 
       <div id="supplier-payables" class="ocn-panel">

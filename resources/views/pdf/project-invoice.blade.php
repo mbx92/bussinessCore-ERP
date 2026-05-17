@@ -49,22 +49,16 @@
     $brand = $brand ?? ['name' => config('app.name', 'OCN ERP Suite'), 'tagline' => 'Integrated Business Platform', 'logo_data_uri' => null];
     $printedAt = $generatedAt->format('F d, Y');
     $dueDate = $generatedAt->copy()->addDays(14)->format('F d, Y');
-    $terms = $project->payments->isNotEmpty()
-        ? $project->payments->map(fn ($term) => [
-            'name' => 'Termin '.$term->term_number.' - '.number_format((float) $term->percentage, 2, ',', '.').'%',
-            'qty' => 1,
-            'unit_price' => (float) $term->amount,
-            'subtotal' => (float) $term->amount,
-            'note' => $term->note,
-        ])
-        : collect([[
-            'name' => 'Total nilai project '.$project->name,
-            'qty' => 1,
-            'unit_price' => (float) $invoice['amount'],
-            'subtotal' => (float) $invoice['amount'],
-            'note' => $project->description,
-        ]]);
-    $termSubtotal = (float) $terms->sum('subtotal');
+    $lineItems = collect($lineItems ?? []);
+    $lineItemsSubtotal = (float) ($lineItemsSubtotal ?? $lineItems->sum('subtotal'));
+    $terms = $project->payments->map(fn ($term) => [
+        'name' => 'Termin '.$term->term_number.' - '.number_format((float) $term->percentage, 2, ',', '.').'%',
+        'qty' => 1,
+        'unit_price' => (float) $term->amount,
+        'subtotal' => (float) $term->amount,
+        'note' => $term->note,
+    ]);
+    $invoiceSubtotal = (float) $invoice['amount'];
 @endphp
 <div class="page">
     <table class="head">
@@ -115,7 +109,7 @@
         </tr>
     </table>
 
-    <h2 class="items-title">Termin Description</h2>
+    <h2 class="items-title">Item Description</h2>
     <table class="items">
         <thead>
             <tr>
@@ -126,23 +120,47 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($terms as $term)
+            @foreach($lineItems as $item)
                 <tr>
-                    <td>{{ $term['name'] }}{{ $term['note'] ? ' - '.$term['note'] : '' }}</td>
-                    <td class="text-right">{{ number_format((float) $term['qty'], 0, ',', '.') }}</td>
-                    <td class="text-right">Rp {{ number_format((float) $term['unit_price'], 0, ',', '.') }}</td>
-                    <td class="text-right">Rp {{ number_format((float) $term['subtotal'], 0, ',', '.') }}</td>
+                    <td>{{ $item['name'] }}</td>
+                    <td class="text-right">{{ number_format((float) $item['qty'], 2, ',', '.') }}</td>
+                    <td class="text-right">Rp {{ number_format((float) $item['unit_price'], 0, ',', '.') }}</td>
+                    <td class="text-right">Rp {{ number_format((float) $item['subtotal'], 0, ',', '.') }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
+
+    @if($terms->isNotEmpty())
+        <h2 class="items-title">Termin Pembayaran</h2>
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>Termin</th>
+                    <th class="text-right" style="width: 12%;">Qty</th>
+                    <th class="text-right" style="width: 24%;">Amount</th>
+                    <th class="text-right" style="width: 24%;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($terms as $term)
+                    <tr>
+                        <td>{{ $term['name'] }}{{ $term['note'] ? ' - '.$term['note'] : '' }}</td>
+                        <td class="text-right">{{ number_format((float) $term['qty'], 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format((float) $term['unit_price'], 0, ',', '.') }}</td>
+                        <td class="text-right">Rp {{ number_format((float) $term['subtotal'], 0, ',', '.') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
 
     <table class="totals-wrap">
         <tr>
             <td></td>
             <td style="width: 310px;">
                 <table class="totals">
-                    <tr><td>SUBTOTAL</td><td>:</td><td class="text-right">Rp {{ number_format($termSubtotal, 0, ',', '.') }}</td></tr>
+                    <tr><td>SUBTOTAL</td><td>:</td><td class="text-right">Rp {{ number_format($invoiceSubtotal, 0, ',', '.') }}</td></tr>
                     <tr><td>PAID</td><td>:</td><td class="text-right">Rp {{ number_format((float) $invoice['paid_amount'], 0, ',', '.') }}</td></tr>
                     <tr class="divider"><td>TOTAL DUE</td><td>:</td><td class="text-right">Rp {{ number_format((float) $invoice['remaining_amount'], 0, ',', '.') }}</td></tr>
                 </table>

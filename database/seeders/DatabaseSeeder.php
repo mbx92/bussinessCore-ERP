@@ -154,7 +154,8 @@ class DatabaseSeeder extends Seeder
             ['code' => 'debit', 'name' => 'Kartu Debit', 'description' => 'Pembayaran via EDC/debit', 'status' => 'active'],
         ];
         foreach ($paymentMethods as $method) {
-            PaymentMethod::query()->updateOrCreate(['code' => $method['code']], $method);
+            $record = PaymentMethod::query()->updateOrCreate(['code' => $method['code']], $method);
+            $record->syncSalesChannels(PaymentMethod::SALES_CHANNEL_KEYS);
         }
 
         $documentSequences = [

@@ -23,8 +23,7 @@ const productCatalog = ref((props.products ?? []).map((item) => ({
 })));
 const cart = ref([]);
 const cashPaidInput = ref('0');
-const defaultPaymentMethodId = props.payment_methods?.[0]?.id ?? null;
-const paymentMethodId = ref(defaultPaymentMethodId);
+const paymentMethodId = ref(null);
 const heldCart = ref([]);
 const heldAdditionalCharges = ref([]);
 const heldMarketplaceOrderCode = ref('');
@@ -105,6 +104,7 @@ const repriceCartForSelectedChannel = () => {
 
 watch(selectedSalesChannel, () => {
   if (!isMarketplaceChannel.value) marketplaceOrderCode.value = '';
+  ensurePaymentMethodForChannel();
 });
 
 const openProductModal = () => {
@@ -236,8 +236,23 @@ const adminChannelFeeTotal = computed(() => additionalCharges.value
 const grossTotal = computed(() => cart.value.reduce((sum, line) => sum + (line.price * line.qty), 0));
 const discountTotal = computed(() => cart.value.reduce((sum, line) => sum + ((line.price * line.qty) * (Number(line.discountPercent || 0) / 100)), 0));
 const grandTotal = computed(() => (grossTotal.value - discountTotal.value) + Number(additionalFeeAddToTotal.value || 0));
+const paymentMethodSupportsChannel = (method, channel) => {
+  const channels = method.sales_channels ?? [];
+  return channels.length === 0 || channels.includes(channel);
+};
+
+const availablePaymentMethods = computed(() => (props.payment_methods ?? [])
+  .filter((method) => paymentMethodSupportsChannel(method, selectedSalesChannel.value)));
+
 const selectedPaymentMethod = computed(() => props.payment_methods?.find((method) => method.id === paymentMethodId.value) ?? null);
 const isCashPayment = computed(() => selectedPaymentMethod.value?.code === 'cash');
+
+const ensurePaymentMethodForChannel = () => {
+  const available = availablePaymentMethods.value;
+  if (!available.some((method) => method.id === paymentMethodId.value)) {
+    paymentMethodId.value = available[0]?.id ?? null;
+  }
+};
 const cashPaidValue = computed(() => parse(cashPaidInput.value));
 const changeAmount = computed(() => Math.max(Number(cashPaidValue.value || 0) - grandTotal.value, 0));
 const hasStockViolation = computed(() => cart.value.some((line) => Number(line.qty) > Number(line.availableStock || 0)));
@@ -505,10 +520,12 @@ const handleCashierShortcuts = (event) => {
 watch(selectedSalesChannel, () => {
   applySalesChannelPricesToCatalog();
   repriceCartForSelectedChannel();
+  ensurePaymentMethodForChannel();
 });
 
 onMounted(() => {
   applySalesChannelPricesToCatalog();
+  ensurePaymentMethodForChannel();
   window.addEventListener('keydown', handleCashierShortcuts);
 });
 
@@ -636,7 +653,7 @@ onBeforeUnmount(() => {
               <div>
                 <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Metode Pembayaran</span></label>
                 <select v-model="paymentMethodId" class="select select-bordered w-full">
-                  <option v-for="method in payment_methods" :key="method.id" :value="method.id">{{ method.name }}</option>
+                  <option v-for="method in availablePaymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option>
                 </select>
               </div>
               <div>
@@ -887,7 +904,7 @@ onBeforeUnmount(() => {
               <div>
                 <label class="label py-1"><span class="label-text text-xs uppercase tracking-wide">Metode Pembayaran</span></label>
                 <select v-model="paymentMethodId" class="select select-bordered w-full">
-                  <option v-for="method in payment_methods" :key="method.id" :value="method.id">{{ method.name }}</option>
+                  <option v-for="method in availablePaymentMethods" :key="method.id" :value="method.id">{{ method.name }}</option>
                 </select>
               </div>
               <div>

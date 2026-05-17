@@ -84,6 +84,144 @@ class Project extends Model
         return $this->hasMany(ProjectMaterial::class);
     }
 
+    public function convertedBudget()
+    {
+        return $this->hasOne(ProjectBudget::class, 'converted_project_id');
+    }
+
+    /**
+     * Nilai kontrak untuk tampilan daftar: kolom project, lalu item budget hasil convert, lalu total harga material.
+     */
+    public function resolveListTotalValue(): float
+    {
+        if ((float) $this->total_value > 0) {
+            return (float) $this->total_value;
+        }
+
+        $budget = $this->relationLoaded('convertedBudget') ? $this->convertedBudget : null;
+
+        if ($budget) {
+            $items = $budget->relationLoaded('items') ? $budget->items : collect();
+
+            if ($items->isNotEmpty()) {
+                $fromItems = (float) $items->sum(
+                    fn ($item) => (float) $item->qty * (float) $item->unit_price
+                );
+
+                if ($fromItems > 0) {
+                    return $fromItems;
+                }
+            }
+
+            if ((float) $budget->estimated_value > 0) {
+                return (float) $budget->estimated_value;
+            }
+        }
+
+        if ($this->relationLoaded('materials')) {
+            $fromMaterials = (float) $this->materials->sum(
+                fn ($material) => (float) $material->planned_qty * (float) $material->unit_price
+            );
+
+            if ($fromMaterials > 0) {
+                return $fromMaterials;
+            }
+        }
+
+        return 0.0;
+    }
+
+    /**
+     * Nilai tagihan invoice: kolom total_value project, atau turunan budget/material.
+     */
+    public function resolveInvoiceAmount(): float
+    {
+        return $this->resolveListTotalValue();
+    }
+
+    /**
+     * Baris detail nota/invoice: item budget hasil convert, lalu material project, lalu legacy cctv_items.
+     *
+     * @return \Illuminate\Support\Collection<int, array{name: string, description: string, qty: float, uom: string, unit_price: float, subtotal: float}>
+     */
+    public function resolveInvoiceLineItems(): \Illuminate\Support\Collection
+    {
+        $this->loadMissing(['materials.product', 'convertedBudget.items']);
+
+        $budget = $this->convertedBudget;
+        $budgetItems = $budget?->items ?? collect();
+
+        if ($budgetItems->isNotEmpty()) {
+            return $budgetItems->map(fn ($item): array => [
+                'name' => (string) $item->name,
+                'description' => trim(collect([$item->item_type, $item->notes])->filter()->implode(' · ')) ?: 'Item budget project',
+                'qty' => (float) $item->qty,
+                'uom' => (string) ($item->uom ?: 'unit'),
+                'unit_price' => (float) $item->unit_price,
+                'subtotal' => (float) $item->qty * (float) $item->unit_price,
+            ])->values();
+        }
+
+        $materialItems = $this->materials
+            ->filter(fn ($material) => (float) $material->planned_qty > 0)
+            ->map(function ($material): array {
+                $qty = (float) $material->planned_qty;
+                $unitPrice = (float) $material->unit_price;
+                if ($unitPrice <= 0) {
+                    $unitPrice = (float) ($material->product?->selling_price ?? 0);
+                }
+
+                return [
+                    'name' => (string) ($material->product?->name ?? 'Material project'),
+                    'description' => trim(implode(' · ', array_filter([
+                        $material->product?->sku,
+                        $material->notes,
+                    ]))) ?: 'Material project',
+                    'qty' => $qty,
+                    'uom' => (string) ($material->product?->uom ?? 'unit'),
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $qty * $unitPrice,
+                ];
+            })
+            ->values();
+
+        if ($materialItems->isNotEmpty()) {
+            return $materialItems;
+        }
+
+        $legacyBudgetItems = collect($budget?->cctv_items ?? [])
+            ->filter(fn ($item) => is_array($item) && trim((string) ($item['name'] ?? '')) !== '')
+            ->map(function (array $item): array {
+                $qty = (float) ($item['qty'] ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+
+                return [
+                    'name' => (string) $item['name'],
+                    'description' => 'Item dari budget project',
+                    'qty' => $qty,
+                    'uom' => 'unit',
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $qty * $unitPrice,
+                ];
+            })
+            ->values();
+
+        if ($legacyBudgetItems->isNotEmpty()) {
+            return $legacyBudgetItems;
+        }
+
+        $amount = $this->resolveInvoiceAmount();
+
+        return collect([[
+            'name' => 'Nilai project '.$this->name,
+            'description' => $this->description ?: 'Pekerjaan project sesuai kesepakatan.',
+            'qty' => 1,
+            'uom' => 'project',
+            'unit_price' => $amount,
+            'subtotal' => $amount,
+        ]]);
+    }
+
     public function getTotalCashInAttribute(): float
     {
         return (float) $this->cashIns()->sum('amount');

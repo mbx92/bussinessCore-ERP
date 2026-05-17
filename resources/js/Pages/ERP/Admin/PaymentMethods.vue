@@ -7,13 +7,17 @@ import { computed, ref } from 'vue';
 
 const props = defineProps({
   paymentMethods: Object,
+  priceChannels: Array,
   filters: Object,
 });
+
+const defaultSalesChannels = () => ['retail'];
 
 const form = useForm({
   code: '',
   name: '',
   description: '',
+  sales_channels: defaultSalesChannels(),
   status: 'active',
 });
 
@@ -23,15 +27,33 @@ const submit = () => {
     preserveScroll: true,
     onSuccess: () => {
       form.reset('code', 'name', 'description');
+      form.sales_channels = defaultSalesChannels();
       form.status = 'active';
       document.getElementById('modal-add-payment-method')?.close();
     },
   });
 };
 
+const channelLabel = (key) => props.priceChannels?.find((channel) => channel.key === key)?.label ?? key;
+
+const isChannelSelected = (targetForm, key) => targetForm.sales_channels.includes(key);
+
+const toggleChannel = (targetForm, key) => {
+  const list = targetForm.sales_channels;
+  const index = list.indexOf(key);
+  if (index >= 0) {
+    if (list.length > 1) {
+      list.splice(index, 1);
+    }
+    return;
+  }
+  list.push(key);
+};
+
 const openAddModal = () => {
   form.clearErrors();
   form.reset('code', 'name', 'description');
+  form.sales_channels = defaultSalesChannels();
   form.status = 'active';
   document.getElementById('modal-add-payment-method')?.showModal();
 };
@@ -56,6 +78,7 @@ const editForm = useForm({
   code: '',
   name: '',
   description: '',
+  sales_channels: defaultSalesChannels(),
   status: 'active',
 });
 
@@ -64,6 +87,7 @@ const openEditModal = (method) => {
   editForm.code = method.code;
   editForm.name = method.name;
   editForm.description = method.description || '';
+  editForm.sales_channels = [...(method.sales_channels?.length ? method.sales_channels : defaultSalesChannels())];
   editForm.status = method.status;
   document.getElementById('modal-edit-payment-method')?.showModal();
 };
@@ -82,6 +106,7 @@ const toggleStatus = (method) => {
     code: method.code,
     name: method.name,
     description: method.description || '',
+    sales_channels: method.sales_channels?.length ? method.sales_channels : defaultSalesChannels(),
     status: method.status === 'active' ? 'inactive' : 'active',
   }, {
     preserveScroll: true,
@@ -149,12 +174,22 @@ const onPerPage = (n) => {
         <div class="overflow-x-auto">
           <table class="table table-zebra">
             <thead>
-              <tr><th>Code</th><th>Nama</th><th>Deskripsi</th><th>Status</th><th></th></tr>
+              <tr><th>Code</th><th>Nama</th><th>Sales Channel</th><th>Deskripsi</th><th>Status</th><th></th></tr>
             </thead>
             <tbody>
               <tr v-for="method in filteredPaymentMethods" :key="method.id">
                 <td class="font-mono text-xs">{{ method.code }}</td>
                 <td class="font-semibold">{{ method.name }}</td>
+                <td>
+                  <div v-if="method.sales_channel_labels?.length" class="flex flex-wrap gap-1">
+                    <span
+                      v-for="label in method.sales_channel_labels"
+                      :key="`${method.id}-${label}`"
+                      class="badge badge-sm badge-info"
+                    >{{ label }}</span>
+                  </div>
+                  <span v-else class="text-base-content/50">Semua channel</span>
+                </td>
                 <td>{{ method.description || '-' }}</td>
                 <td><span class="badge badge-sm" :class="method.status === 'active' ? 'badge-success' : 'badge-ghost'">{{ method.status }}</span></td>
                 <td class="text-right">
@@ -171,7 +206,7 @@ const onPerPage = (n) => {
                 </td>
               </tr>
               <tr v-if="!filteredPaymentMethods.length">
-                <td colspan="5" class="py-8 text-center text-base-content/50">Belum ada metode pembayaran.</td>
+                <td colspan="6" class="py-8 text-center text-base-content/50">Belum ada metode pembayaran.</td>
               </tr>
             </tbody>
           </table>
@@ -193,6 +228,26 @@ const onPerPage = (n) => {
             <label class="label"><span class="label-text">Nama</span></label>
             <input v-model="editForm.name" type="text" class="input input-bordered w-full" />
             <p v-if="editForm.errors.name" class="text-error text-xs mt-1">{{ editForm.errors.name }}</p>
+          </div>
+          <div>
+            <label class="label"><span class="label-text">Sales Channel</span></label>
+            <p class="text-xs text-base-content/60 mb-2">Pilih satu atau lebih channel tempat metode ini tersedia di POS.</p>
+            <div class="flex flex-wrap gap-2">
+              <label
+                v-for="channel in priceChannels"
+                :key="`edit-${channel.key}`"
+                class="label cursor-pointer gap-2 rounded-lg border border-base-300 px-3 py-2"
+              >
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm checkbox-primary"
+                  :checked="isChannelSelected(editForm, channel.key)"
+                  @change="toggleChannel(editForm, channel.key)"
+                />
+                <span class="label-text">{{ channel.label }}</span>
+              </label>
+            </div>
+            <p v-if="editForm.errors.sales_channels" class="text-error text-xs mt-1">{{ editForm.errors.sales_channels }}</p>
           </div>
           <div>
             <label class="label"><span class="label-text">Deskripsi</span></label>
@@ -234,6 +289,26 @@ const onPerPage = (n) => {
             <p v-if="form.errors.name" class="text-error text-xs mt-1">{{ form.errors.name }}</p>
           </div>
           <div>
+            <label class="label"><span class="label-text">Sales Channel</span></label>
+            <p class="text-xs text-base-content/60 mb-2">Default: Retail. Centang channel lain jika metode dipakai di sana juga.</p>
+            <div class="flex flex-wrap gap-2">
+              <label
+                v-for="channel in priceChannels"
+                :key="`add-${channel.key}`"
+                class="label cursor-pointer gap-2 rounded-lg border border-base-300 px-3 py-2"
+              >
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm checkbox-primary"
+                  :checked="isChannelSelected(form, channel.key)"
+                  @change="toggleChannel(form, channel.key)"
+                />
+                <span class="label-text">{{ channel.label }}</span>
+              </label>
+            </div>
+            <p v-if="form.errors.sales_channels" class="text-error text-xs mt-1">{{ form.errors.sales_channels }}</p>
+          </div>
+          <div>
             <label class="label"><span class="label-text">Deskripsi</span></label>
             <input v-model="form.description" type="text" class="input input-bordered w-full" placeholder="Opsional" />
             <p v-if="form.errors.description" class="text-error text-xs mt-1">{{ form.errors.description }}</p>
@@ -259,4 +334,3 @@ const onPerPage = (n) => {
     </dialog>
   </AppLayout>
 </template>
-

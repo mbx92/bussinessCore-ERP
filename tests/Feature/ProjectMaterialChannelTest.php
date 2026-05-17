@@ -180,6 +180,15 @@ class ProjectMaterialChannelTest extends TestCase
                 ->where('project.materials.0.subtotal_cost', 1000000)
                 ->where('project.materials.0.subtotal_price', 1600000)
                 ->etc());
+
+        $this
+            ->actingAs($user)
+            ->get(route('projects.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Projects/Index')
+                ->where('projects.data.0.total_value', 1600000)
+                ->etc());
     }
 
     public function test_can_plan_project_material_when_stock_is_empty(): void

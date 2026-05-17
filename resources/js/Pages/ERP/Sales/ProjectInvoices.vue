@@ -5,6 +5,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   invoices: Object,
@@ -12,6 +13,7 @@ const props = defineProps({
 });
 
 const { format } = useCurrency();
+const { formatDate } = useDateFormat();
 
 const openInvoice = (invoice) => {
   router.visit(route('erp.sales.project-invoices.show', invoice.id));
@@ -74,7 +76,7 @@ const openInvoice = (invoice) => {
                 <td>{{ format(invoice.amount) }}</td>
                 <td>{{ format(invoice.paid_amount) }}</td>
                 <td>{{ format(invoice.remaining_amount) }}</td>
-                <td>{{ invoice.finished_at || '-' }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(invoice.finished_at) }}</td>
                 <td><StatusBadge :status="invoice.status" /></td>
               </tr>
               <tr v-if="!(invoices?.data || []).length">

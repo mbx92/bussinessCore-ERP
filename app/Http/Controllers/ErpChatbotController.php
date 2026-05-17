@@ -790,7 +790,8 @@ class ErpChatbotController extends Controller
         }
 
         if (! $confirmed) {
-            $amount = number_format((float) $project->total_value, 0, ',', '.');
+            $project->loadMissing(['convertedBudget.items', 'materials']);
+            $amount = number_format($project->resolveInvoiceAmount(), 0, ',', '.');
 
             return "Siap mengirim invoice:\n"
                 ."- Invoice: **{$project->invoice_number}**\n"
@@ -801,14 +802,17 @@ class ErpChatbotController extends Controller
                 ."`konfirmasi kirim invoice {$project->invoice_number} ke {$recipientEmail}`";
         }
 
-        $project->load(['payments', 'cashIns']);
+        $project->load(['payments', 'cashIns', 'materials.product', 'convertedBudget.items']);
         $project->loadSum('cashIns as paid_amount', 'amount');
         $invoice = $this->mapProjectInvoice($project);
+        $lineItems = $project->resolveInvoiceLineItems();
 
         try {
             $pdf = Pdf::loadView('pdf.project-invoice', [
                 'project' => $project,
                 'invoice' => $invoice,
+                'lineItems' => $lineItems,
+                'lineItemsSubtotal' => $lineItems->sum('subtotal'),
                 'generatedAt' => now(),
             ])->setPaper('a4');
 
@@ -951,7 +955,7 @@ class ErpChatbotController extends Controller
     private function mapProjectInvoice(Project $project): array
     {
         $paidAmount = (float) ($project->paid_amount ?? $project->cashIns()->sum('amount'));
-        $amount = (float) $project->total_value;
+        $amount = $project->resolveInvoiceAmount();
         $remaining = max($amount - $paidAmount, 0);
 
         return [
