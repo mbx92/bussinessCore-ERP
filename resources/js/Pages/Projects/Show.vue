@@ -637,8 +637,8 @@ const deleteProject = () => {
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div class="text-base-content/60">Kontak Klien</div><div>{{ project.client_contact ?? '-' }}</div>
                             <div class="text-base-content/60">Tipe Project</div><div>{{ projectTypeLabel(project.project_type) }}</div>
-                            <div class="text-base-content/60">Tanggal Mulai</div><div>{{ project.started_at ?? '-' }}</div>
-                            <div class="text-base-content/60">Tanggal Selesai</div><div>{{ project.finished_at ?? '-' }}</div>
+                            <div class="text-base-content/60">Tanggal Mulai</div><div>{{ formatDate(project.started_at) }}</div>
+                            <div class="text-base-content/60">Tanggal Selesai</div><div>{{ formatDate(project.finished_at) }}</div>
                             <div class="text-base-content/60">Deskripsi</div><div>{{ project.description ?? '-' }}</div>
                         </div>
                     </div>
@@ -656,7 +656,7 @@ const deleteProject = () => {
                                 <div>
                                     <p class="font-medium">Termin {{ term.term_number }} — {{ term.percentage }}%</p>
                                     <p class="text-sm text-base-content/60">{{ format(term.amount) }}</p>
-                                    <p v-if="term.paid_at" class="text-xs text-success">Lunas: {{ term.paid_at }}</p>
+                                    <p v-if="term.paid_at" class="text-xs text-success">Lunas: {{ formatDate(term.paid_at) }}</p>
                                 </div>
                                 <div>
                                     <button v-if="!term.paid_at" class="btn btn-success btn-sm" @click="openPayModal(term)">
@@ -790,7 +790,7 @@ const deleteProject = () => {
                                     :key="c.id"
                                     class="border-l-4 border-l-error"
                                 >
-                                    <td>{{ c.date }}</td>
+                                    <td class="whitespace-nowrap">{{ formatDate(c.date) }}</td>
                                     <td><span class="badge badge-sm badge-ghost">{{ categoryLabel(c.category) }}</span></td>
                                     <td class="text-right font-semibold tabular-nums text-error">
                                         -{{ format(c.amount) }}
@@ -918,7 +918,7 @@ const deleteProject = () => {
                                 <tr v-for="r in project.referrals" :key="r.id">
                                     <td class="font-medium">{{ r.referrer_name }}</td>
                                     <td>{{ format(r.commission_amount) }}</td>
-                                    <td>{{ r.paid_at ?? '-' }}</td>
+                                    <td class="whitespace-nowrap">{{ formatDate(r.paid_at) }}</td>
                                     <td class="text-sm text-base-content/70">{{ r.note ?? '-' }}</td>
                                 </tr>
                                 <tr v-if="!project.referrals.length"><td colspan="4" class="text-center py-6 text-base-content/50">Belum ada referral</td></tr>
@@ -972,7 +972,7 @@ const deleteProject = () => {
                                     <div class="font-medium">{{ task.title }}</div>
                                     <p v-if="task.description" class="text-sm text-base-content/70">{{ task.description }}</p>
                                     <div class="text-xs text-base-content/60">PIC: {{ task.assigned_user_name ?? '-' }}</div>
-                                    <div class="text-xs text-base-content/60">Due: {{ task.due_date ?? '-' }}</div>
+                                    <div class="text-xs text-base-content/60">Due: {{ formatDate(task.due_date) }}</div>
                                     <div class="flex gap-2">
                                         <select class="select select-bordered select-xs" :value="task.status" @change="updateTaskStatus(task, $event.target.value)">
                                             <option value="todo">To Do</option>

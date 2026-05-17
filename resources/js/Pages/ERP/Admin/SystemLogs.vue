@@ -4,6 +4,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, ref, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   logs: Object,
@@ -11,6 +12,8 @@ const props = defineProps({
   levels: Array,
   channels: Array,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const filters = reactive({
   level: props.filters?.level ?? '',
@@ -174,7 +177,7 @@ const closeModal = () => {
                   class="hover:bg-primary/5 cursor-pointer"
                   @click="openLog(log)"
                 >
-                  <td class="font-mono text-[11px]">{{ log.created_at }}</td>
+                  <td class="whitespace-nowrap text-[11px]">{{ formatDateTime(log.created_at) }}</td>
                   <td>
                     <span class="badge badge-xs font-mono uppercase" :class="badgeForLevel(log.level)">
                       {{ log.level }}
@@ -226,7 +229,7 @@ const closeModal = () => {
                 {{ selectedLog.event }}
               </h2>
               <p class="mt-1 text-xs text-base-content/60">
-                {{ selectedLog.created_at }} ·
+                {{ formatDateTime(selectedLog.created_at) }} ·
                 <span class="font-mono">{{ selectedLog.channel }}</span>
               </p>
             </div>

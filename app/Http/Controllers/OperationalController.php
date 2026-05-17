@@ -67,11 +67,7 @@ class OperationalController extends Controller
             'rows' => $rows,
             'total' => $total,
             'projects' => Project::query()->orderBy('name')->get(['id', 'name']),
-            'cashAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
             'filters' => $request->only(['project_id', 'company_id', 'date_from', 'date_to', 'q']),
         ]);
     }

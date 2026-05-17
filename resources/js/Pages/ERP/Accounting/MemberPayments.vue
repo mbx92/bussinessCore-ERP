@@ -12,6 +12,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   members: Array,
@@ -21,6 +22,8 @@ const props = defineProps({
   years: Array,
   cashAccounts: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const { format } = useCurrency();
 
@@ -297,7 +300,7 @@ const totalPayable = computed(() => (
                 <td>{{ d.project_name }}</td>
                 <td class="capitalize">{{ d.role_in_project }}</td>
                 <td class="text-right">{{ format(d.total_pay) }}</td>
-                <td>{{ d.payment_date ?? d.paid_at ?? '-' }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(d.payment_date ?? d.paid_at) }}</td>
                 <td><StatusBadge status="paid" /></td>
                 <td class="text-right">
                   <Link

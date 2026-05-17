@@ -6,11 +6,14 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { useCurrency } from '@/composables/useCurrency';
 import { reactive, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   transactions: Object,
   filters: Object,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const { format } = useCurrency();
 const filters = reactive({
@@ -126,7 +129,7 @@ const channelBadgeClass = (channel) => ({
                   <td class="font-mono text-xs">{{ trx.number }}</td>
                   <td class="font-mono text-xs">{{ trx.marketplace_order_code || '-' }}</td>
                   <td><span class="badge badge-sm" :class="channelBadgeClass(trx.sales_channel_key)">{{ trx.sales_channel || '-' }}</span></td>
-                  <td>{{ trx.sold_at || '-' }}</td>
+                  <td class="whitespace-nowrap">{{ formatDateTime(trx.sold_at) }}</td>
                   <td>{{ trx.items_count }}</td>
                   <td class="font-semibold text-primary">{{ format(trx.grand_total) }}</td>
                   <td>{{ trx.payment_method || '-' }}</td>

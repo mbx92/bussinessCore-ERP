@@ -5,12 +5,15 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   leads: Object,
   users: Array,
   filters: Object,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const { format } = useCurrency();
 
@@ -226,7 +229,7 @@ const remove = (row) => {
                 </td>
                 <td class="text-right tabular-nums">{{ format(row.estimated_value) }}</td>
                 <td class="text-sm">{{ row.pic_name || '—' }}</td>
-                <td class="text-xs text-base-content/60">{{ row.created_at }}</td>
+                <td class="text-xs text-base-content/60">{{ formatDateTime(row.created_at) }}</td>
                 <td class="text-right">
                   <button type="button" class="btn btn-ghost btn-xs" @click="openEdit(row)">Edit</button>
                   <button type="button" class="btn btn-ghost btn-xs text-error" @click="remove(row)">Hapus</button>

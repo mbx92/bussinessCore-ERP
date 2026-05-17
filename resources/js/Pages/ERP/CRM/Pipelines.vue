@@ -5,6 +5,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   pipelines: Object,
@@ -13,6 +14,8 @@ const props = defineProps({
   users: Array,
   filters: Object,
 });
+
+const { formatDate } = useDateFormat();
 
 const { format } = useCurrency();
 
@@ -205,7 +208,7 @@ const remove = (row) => {
                     <span class="text-xs tabular-nums">{{ row.win_probability }}%</span>
                   </div>
                 </td>
-                <td class="text-xs text-base-content/70">{{ row.expected_close_date || '—' }}</td>
+                <td class="text-xs text-base-content/70">{{ formatDate(row.expected_close_date) }}</td>
                 <td class="text-sm">{{ row.pic_name || '—' }}</td>
                 <td class="text-right">
                   <button type="button" class="btn btn-ghost btn-xs" @click="openEdit(row)">Edit</button>

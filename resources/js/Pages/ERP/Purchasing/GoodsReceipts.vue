@@ -5,6 +5,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, reactive, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   receipts: Object,
@@ -13,6 +14,8 @@ const props = defineProps({
   purchaseOrders: Array,
   warehouses: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const openRow = (number) => {
   router.visit(route('erp.purchasing.goods-receipts.show', number));
@@ -168,7 +171,7 @@ const openAddModal = () => {
               >
                 <td class="font-mono text-xs font-semibold">{{ r.number }}</td>
                 <td class="font-mono text-xs">{{ r.po_number }}</td>
-                <td>{{ r.received_date }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(r.received_date) }}</td>
                 <td>{{ r.items }}</td>
                 <td @click.stop><StatusBadge :status="r.status" /></td>
               </tr>

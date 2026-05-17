@@ -4,6 +4,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   movements: Object,
@@ -12,6 +13,8 @@ const props = defineProps({
   products: Array,
   types: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const filters = reactive({
   warehouse_id: props.filters?.warehouse_id ?? '',
@@ -120,7 +123,7 @@ watch(
             </thead>
             <tbody>
               <tr v-for="m in movements.data" :key="m.id">
-                <td class="font-mono text-xs">{{ m.date }}</td>
+                <td class="whitespace-nowrap text-xs">{{ formatDate(m.date) }}</td>
                 <td><span class="badge badge-sm badge-ghost">{{ m.type }}</span></td>
                 <td class="font-mono text-xs">{{ m.sku }}</td>
                 <td class="font-semibold">{{ m.product }}</td>

@@ -992,7 +992,7 @@ class ERPSalesController extends Controller
     {
         abort_unless($project->status === 'selesai', 404);
 
-        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod', 'materials.product', 'convertedBudget.items']);
+        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod', 'cashIns.cashAccount', 'materials.product', 'convertedBudget.items']);
         $project->loadSum('cashIns as paid_amount', 'amount');
         $project->invoice_number = $this->ensureProjectInvoiceNumber($project);
 
@@ -1021,6 +1021,8 @@ class ERPSalesController extends Controller
                         'category' => $cashIn->category,
                         'payment_method_id' => $cashIn->payment_method_id,
                         'payment_method_name' => $cashIn->paymentMethod?->name,
+                        'cash_account_id' => $cashIn->cash_account_id,
+                        'cash_account_name' => $cashIn->cashAccount?->displayLabel(),
                         'note' => $cashIn->note,
                         'creator_name' => $cashIn->creator?->name,
                     ]),
@@ -1030,6 +1032,7 @@ class ERPSalesController extends Controller
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
         ]);
     }
 
@@ -1041,16 +1044,22 @@ class ERPSalesController extends Controller
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
             'payment_method_id' => 'required|exists:payment_methods,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'note' => 'nullable|string|max:1000',
         ]);
 
         $paidAmount = (float) $project->cashIns()->sum('amount');
-        $remaining = max((float) $project->total_value - $paidAmount, 0);
+        $invoiceAmount = $project->resolveInvoiceAmount();
+        $remaining = max($invoiceAmount - $paidAmount, 0);
         if ((float) $validated['amount'] > $remaining) {
             throw ValidationException::withMessages([
                 'amount' => 'Jumlah pembayaran melebihi sisa tagihan: Rp '.number_format($remaining, 0, ',', '.'),
             ]);
         }
+
+        $coa = app(CoaSettingService::class);
+        $cashAccount = Account::query()->findOrFail((int) $validated['cash_account_id']);
+        $revenueAccount = $coa->resolveAccountByKey('project_invoice_revenue_account', '4003');
 
         $validated['project_id'] = $project->id;
         $validated['category'] = 'pendapatan_project';
@@ -1062,10 +1071,6 @@ class ERPSalesController extends Controller
         $validated['posted_by'] = Auth::id();
 
         $cashIn = CashIn::query()->create($validated);
-
-        $coa = app(CoaSettingService::class);
-        $cashAccount = $coa->resolveAccountByKey('project_invoice_cash_account', '1001');
-        $revenueAccount = $coa->resolveAccountByKey('project_invoice_revenue_account', '4003');
 
         $entry = $this->glPostingService->post(
             ErpCompanyResolver::resolveForGlPosting($request),
@@ -1092,22 +1097,26 @@ class ERPSalesController extends Controller
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
             'payment_method_id' => 'required|exists:payment_methods,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'note' => 'nullable|string|max:1000',
         ]);
 
         $totalPaidOther = (float) $project->cashIns()->whereKeyNot($cashIn->id)->sum('amount');
-        $remaining = max((float) $project->total_value - $totalPaidOther, 0);
+        $remaining = max($project->resolveInvoiceAmount() - $totalPaidOther, 0);
         if ((float) $validated['amount'] > $remaining) {
             throw ValidationException::withMessages([
                 'amount' => 'Jumlah pembayaran melebihi sisa tagihan: Rp '.number_format($remaining, 0, ',', '.'),
             ]);
         }
 
-        DB::transaction(function () use ($cashIn, $validated, $project): void {
+        $cashAccount = Account::query()->findOrFail((int) $validated['cash_account_id']);
+
+        DB::transaction(function () use ($cashIn, $validated, $project, $cashAccount): void {
             $cashIn->update([
                 'amount' => $validated['amount'],
                 'date' => $validated['date'],
                 'payment_method_id' => $validated['payment_method_id'],
+                'cash_account_id' => $cashAccount->id,
                 'note' => $validated['note'] ?? null,
             ]);
 
@@ -1121,7 +1130,11 @@ class ERPSalesController extends Controller
 
                     foreach ($entry->lines as $line) {
                         if ((float) $line->debit > 0) {
-                            $line->update(['debit' => $validated['amount'], 'credit' => 0]);
+                            $line->update([
+                                'account_id' => $cashAccount->id,
+                                'debit' => $validated['amount'],
+                                'credit' => 0,
+                            ]);
                         } else {
                             $line->update(['debit' => 0, 'credit' => $validated['amount']]);
                         }

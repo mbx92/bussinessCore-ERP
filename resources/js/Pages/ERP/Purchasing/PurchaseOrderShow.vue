@@ -6,12 +6,15 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, reactive, watch } from 'vue';
 import { showGlobalAlert } from '@/utils/globalAlert';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   detail: Object,
   suppliers: Array,
   products: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const formatIdr = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n ?? 0);
@@ -205,7 +208,7 @@ watch(
                 Profil supplier
               </Link>
             </p>
-              <p class="ocn-panel__desc mt-1">Dibuat {{ detail.created_at }} · ETA {{ detail.eta }} · Total {{ formatIdr(detail.amount) }}</p>
+              <p class="ocn-panel__desc mt-1">Dibuat {{ formatDate(detail.created_at) }} · ETA {{ formatDate(detail.eta) }} · Total {{ formatIdr(detail.amount) }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
               <div class="flex flex-wrap items-center gap-2">

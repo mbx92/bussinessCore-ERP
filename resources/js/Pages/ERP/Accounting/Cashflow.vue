@@ -8,6 +8,7 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 import { showGlobalAlert } from '@/utils/globalAlert';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   entries: Array,
@@ -20,6 +21,8 @@ const props = defineProps({
   categoryOptions: Object,
   canMutate: Boolean,
 });
+
+const { formatDate } = useDateFormat();
 
 const { format } = useCurrency();
 const page = usePage();
@@ -58,13 +61,6 @@ const typeLabel = (type) => (type === 'in' ? 'Masuk' : 'Keluar');
 const sourceLabel = (source) => {
   const found = (props.sourceOptions ?? []).find((opt) => opt.value === source);
   return found?.label ?? (source || 'Manual / Umum');
-};
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  const d = new Date(dateStr);
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 const categoryLabelMap = computed(() => {
@@ -419,7 +415,7 @@ const confirmDestroyEntry = () => {
       <div class="modal-box max-w-2xl">
         <h3 class="font-bold text-lg">Detail Cashflow Accounting</h3>
         <div v-if="selectedEntry" class="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <div class="text-base-content/60">Tanggal</div><div>{{ selectedEntry.date }}</div>
+          <div class="text-base-content/60">Tanggal</div><div>{{ formatDate(selectedEntry.date) }}</div>
           <div class="text-base-content/60">Jenis</div><div>{{ typeLabel(selectedEntry.type) }}</div>
           <div class="text-base-content/60">Peruntukan</div><div>{{ selectedEntry.source_name || '-' }}</div>
           <div class="text-base-content/60">Referensi</div><div class="font-mono text-xs">{{ selectedEntry.reference_no || '-' }}</div>

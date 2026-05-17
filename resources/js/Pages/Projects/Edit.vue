@@ -5,6 +5,10 @@ import CurrencyInput from '@/Components/CurrencyInput.vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
+
+const { formatDate } = useDateFormat();
+
 
 const props = defineProps({
     project: Object,
@@ -291,7 +295,7 @@ const submit = () => {
                                         <td>{{ p.percentage }}%</td>
                                         <td class="font-medium">{{ format(p.amount) }}</td>
                                         <td>
-                                            <span v-if="p.paid_at" class="badge badge-success badge-sm">Lunas {{ p.paid_at }}</span>
+                                            <span v-if="p.paid_at" class="badge badge-success badge-sm">Lunas {{ formatDate(p.paid_at) }}</span>
                                             <span v-else class="badge badge-ghost badge-sm">Belum</span>
                                         </td>
                                         <td class="text-sm text-base-content/70">{{ p.note || '—' }}</td>

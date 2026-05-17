@@ -5,12 +5,15 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   payables: Array,
   summary: Object,
   cashAccounts: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const { format } = useCurrency();
 const selectedPayable = ref(null);
@@ -163,7 +166,7 @@ const paidPayables = computed(() => (props.payables ?? []).filter((row) => Numbe
                   <p class="font-mono text-xs">{{ payable.po_number ?? '-' }}</p>
                   <p class="font-mono text-xs text-base-content/60">{{ payable.grn_number ?? '-' }}</p>
                 </td>
-                <td>{{ payable.due_date ?? '-' }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(payable.due_date) }}</td>
                 <td class="text-right">{{ format(payable.amount) }}</td>
                 <td class="text-right text-success">{{ format(payable.paid_amount) }}</td>
                 <td class="text-right font-semibold text-warning">{{ format(payable.outstanding_amount) }}</td>
@@ -223,12 +226,15 @@ const paidPayables = computed(() => (props.payables ?? []).filter((row) => Numbe
             </div>
             <div>
               <label class="label"><span class="label-text">Akun Kas/Bank</span></label>
-              <select v-model="paymentForm.cash_account_id" class="select select-bordered w-full">
-                <option value="" disabled>Pilih akun kas/bank</option>
+              <select v-model="paymentForm.cash_account_id" class="select select-bordered w-full" :disabled="!(cashAccounts || []).length">
+                <option value="" disabled>{{ (cashAccounts || []).length ? 'Pilih akun kas/bank' : 'Belum ada akun kas/bank aktif' }}</option>
                 <option v-for="account in cashAccounts" :key="account.id" :value="account.id">
                   {{ account.code }} - {{ account.name }}
                 </option>
               </select>
+              <p v-if="!(cashAccounts || []).length" class="mt-1 text-xs text-warning">
+                Tidak ada akun kas/bank. Atur di Pengaturan COA (Kas POS / Kas invoice project), env ACCOUNTING_CASH_BANK_CODES (mis. 1101,1102), atau nama akun yang mengandung Kas/Bank.
+              </p>
               <p v-if="paymentForm.errors.cash_account_id" class="mt-1 text-xs text-error">{{ paymentForm.errors.cash_account_id }}</p>
             </div>
             <div>

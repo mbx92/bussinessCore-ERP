@@ -4,6 +4,9 @@ import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
+
+const { formatDate } = useDateFormat();
 
 defineProps({
     investments: Array,
@@ -182,7 +185,7 @@ const assetLabel = (types, value) => types?.find((t) => t.value === value)?.labe
               </thead>
               <tbody>
                 <tr v-for="m in inv.movements" :key="m.id">
-                  <td class="font-mono text-xs whitespace-nowrap">{{ m.occurred_on }}</td>
+                  <td class="text-xs whitespace-nowrap">{{ formatDate(m.occurred_on) }}</td>
                   <td><span class="badge badge-ghost badge-sm">{{ flowLabel(m.flow) }}</span></td>
                   <td class="text-right font-mono">{{ money(m.amount) }}</td>
                   <td class="text-sm text-base-content/70">{{ m.note || '—' }}</td>

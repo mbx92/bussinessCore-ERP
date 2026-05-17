@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\ERP\Accounting\Models\Account;
 use App\ERP\Accounting\Models\JournalEntry;
+use App\ERP\Accounting\Models\JournalLine;
 use App\ERP\Accounting\Models\PayablePayment;
+use App\ERP\Accounting\Support\CashAccountLabelResolver;
 use App\ERP\Accounting\Services\CoaSettingService;
 use App\ERP\Accounting\Services\GlPostingService;
 use App\ERP\Core\Services\ErpCompanyResolver;
@@ -48,12 +50,7 @@ class CashflowController extends Controller
                 ->where('status', 'active')
                 ->orderBy('name')
                 ->get(['id', 'name']),
-            'cashAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->where('code', 'like', '100%')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
             'filters' => $request->only(['type', 'source', 'project_id', 'category', 'company_id', 'date_from', 'date_to', 'q']),
             'sourceOptions' => $this->sourceOptions(),
             'categoryOptions' => [
@@ -186,8 +183,11 @@ class CashflowController extends Controller
                 ->when($request->filled('category'), fn ($q) => $q->where('category', $request->string('category')->toString()))
                 ->when($request->filled('date_from'), fn ($q) => $q->whereDate('date', '>=', $request->date('date_from')))
                 ->when($request->filled('date_to'), fn ($q) => $q->whereDate('date', '<=', $request->date('date_to')))
-                ->get()
-                ->map(fn (CashIn $entry) => [
+                ->get();
+
+        $cashInDebitAccounts = $this->debitCashAccountsByJournal($cashIns->pluck('journal_entry_id')->filter());
+
+        $cashIns = $cashIns->map(fn (CashIn $entry) => [
                     'id' => $entry->id,
                     'type' => 'in',
                     'source' => $entry->project_id ? 'project' : 'manual',
@@ -203,7 +203,11 @@ class CashflowController extends Controller
                     'payment_method_name' => $entry->paymentMethod?->name,
                     'payment_method_id' => $entry->payment_method_id,
                     'cash_account_id' => $entry->cash_account_id,
-                    'cash_account_name' => $entry->cashAccount ? ($entry->cashAccount->code.' - '.$entry->cashAccount->name) : '-',
+                    'cash_account_name' => CashAccountLabelResolver::label(
+                        $entry->cashAccount,
+                        $entry->journal_entry_id,
+                        $cashInDebitAccounts
+                    ),
                     'recipient_name' => null,
                     'note' => $entry->note,
                     'creator_name' => $entry->creator?->name ?? '-',
@@ -229,8 +233,11 @@ class CashflowController extends Controller
                 ->when($request->filled('category'), fn ($q) => $q->where('category', $request->string('category')->toString()))
                 ->when($request->filled('date_from'), fn ($q) => $q->whereDate('date', '>=', $request->date('date_from')))
                 ->when($request->filled('date_to'), fn ($q) => $q->whereDate('date', '<=', $request->date('date_to')))
-                ->get()
-                ->map(function (CashOut $entry) use ($memberPaymentByCashOutId) {
+                ->get();
+
+        $cashOutDebitAccounts = $this->debitCashAccountsByJournal($cashOuts->pluck('journal_entry_id')->filter());
+
+        $cashOuts = $cashOuts->map(function (CashOut $entry) use ($memberPaymentByCashOutId, $cashOutDebitAccounts) {
                     $distribution = $memberPaymentByCashOutId->get($entry->id);
                     $isMemberPayment = $distribution !== null;
 
@@ -250,7 +257,11 @@ class CashflowController extends Controller
                     'payment_method_name' => null,
                     'payment_method_id' => null,
                     'cash_account_id' => $entry->cash_account_id,
-                    'cash_account_name' => $entry->cashAccount ? ($entry->cashAccount->code.' - '.$entry->cashAccount->name) : '-',
+                    'cash_account_name' => CashAccountLabelResolver::label(
+                        $entry->cashAccount,
+                        $entry->journal_entry_id,
+                        $cashOutDebitAccounts
+                    ),
                     'recipient_name' => $entry->recipient_name,
                     'note' => $entry->note,
                     'creator_name' => $entry->creator?->name ?? '-',
@@ -268,8 +279,11 @@ class CashflowController extends Controller
                 ->when($companyId, fn ($q) => $q->whereHas('journalEntry', fn ($jq) => $jq->where('company_id', $companyId)))
                 ->when($request->filled('date_from'), fn ($q) => $q->whereDate('payment_date', '>=', $request->date('date_from')))
                 ->when($request->filled('date_to'), fn ($q) => $q->whereDate('payment_date', '<=', $request->date('date_to')))
-                ->get()
-                ->map(fn (PayablePayment $payment) => [
+                ->get();
+
+        $supplierDebitAccounts = $this->debitCashAccountsByJournal($supplierPayments->pluck('journal_entry_id')->filter());
+
+        $supplierPayments = $supplierPayments->map(fn (PayablePayment $payment) => [
                     'id' => 'ap-'.$payment->id,
                     'type' => 'out',
                     'source' => 'supplier_payment',
@@ -283,7 +297,11 @@ class CashflowController extends Controller
                     'payment_method_name' => null,
                     'payment_method_id' => null,
                     'cash_account_id' => $payment->cash_account_id,
-                    'cash_account_name' => $payment->cashAccount ? ($payment->cashAccount->code.' - '.$payment->cashAccount->name) : '-',
+                    'cash_account_name' => CashAccountLabelResolver::label(
+                        $payment->cashAccount,
+                        $payment->journal_entry_id,
+                        $supplierDebitAccounts
+                    ),
                     'recipient_name' => $payment->payable?->vendor?->name,
                     'note' => $payment->note,
                     'creator_name' => $payment->payer?->name ?? '-',
@@ -408,6 +426,26 @@ class CashflowController extends Controller
                 'created_at' => optional($sale->sold_at)->timestamp ?? 0,
             ];
         })->filter()->values();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, int|string|null>  $journalEntryIds
+     * @return \Illuminate\Support\Collection<int, JournalLine>
+     */
+    private function debitCashAccountsByJournal(Collection $journalEntryIds): Collection
+    {
+        $ids = $journalEntryIds->filter()->unique()->values();
+
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+
+        return JournalLine::query()
+            ->with('account:id,code,name')
+            ->whereIn('journal_entry_id', $ids)
+            ->where('debit', '>', 0)
+            ->get()
+            ->keyBy('journal_entry_id');
     }
 
     private function canMutateCashflow(Request $request): bool

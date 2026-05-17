@@ -4,6 +4,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { ArrowLeftIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline';
 import { computed } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const { format } = useCurrency();
 
@@ -20,6 +21,8 @@ const props = defineProps({
   companies: Array,
   selected_company_id: [Number, null],
 });
+
+const { formatDate } = useDateFormat();
 
 const page = usePage();
 
@@ -250,7 +253,7 @@ const submit = () => {
             <tbody>
               <tr v-for="entry in openingEntries" :key="entry.id">
                 <td class="text-sm">{{ entry.company_name ?? '-' }}</td>
-                <td>{{ entry.entry_date }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(entry.entry_date) }}</td>
                 <td class="font-mono text-xs">{{ entry.entry_no }}</td>
                 <td>
                   <p class="font-medium">{{ entry.description ?? '-' }}</p>

@@ -5,6 +5,7 @@ import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   entries: Object,
@@ -13,6 +14,7 @@ const props = defineProps({
 });
 
 const { format } = useCurrency();
+const { formatDate } = useDateFormat();
 
 const page = usePage();
 const erpCompanyContext = () => page.props.erpCompanyContext ?? null;
@@ -33,12 +35,6 @@ watch(filters, (val) => {
   }, 400);
 }, { deep: true });
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  const d = new Date(dateStr);
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-};
 </script>
 
 <template>

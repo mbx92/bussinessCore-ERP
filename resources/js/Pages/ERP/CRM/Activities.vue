@@ -4,6 +4,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, ref, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   activities: Object,
@@ -12,6 +13,8 @@ const props = defineProps({
   pipelines: Array,
   filters: Object,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const filters = reactive({
   q: props.filters?.q ?? '',
@@ -222,10 +225,10 @@ const remove = (row) => {
                   <span v-else>—</span>
                 </td>
                 <td class="text-xs text-base-content/70">{{ row.pipeline_title || '—' }}</td>
-                <td class="text-xs text-base-content/70 whitespace-nowrap">{{ row.activity_date }}</td>
+                <td class="text-xs text-base-content/70 whitespace-nowrap">{{ formatDateTime(row.activity_date) }}</td>
                 <td class="text-xs">
                   <template v-if="row.next_action_date">
-                    <span class="font-medium text-warning">{{ row.next_action_date }}</span>
+                    <span class="font-medium text-warning">{{ formatDate(row.next_action_date) }}</span>
                     <span v-if="row.next_action_note" class="block text-base-content/50 truncate max-w-[10rem]">{{ row.next_action_note }}</span>
                   </template>
                   <span v-else>—</span>

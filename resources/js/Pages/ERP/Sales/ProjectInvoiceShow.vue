@@ -10,6 +10,7 @@ import { useDateFormat } from '@/composables/useDateFormat';
 const props = defineProps({
   invoice: Object,
   paymentMethods: Array,
+  cashAccounts: Array,
 });
 
 const { format, parse, formatInput } = useCurrency();
@@ -41,6 +42,7 @@ const paymentForm = useForm({
   amount: props.invoice.remaining_amount || 0,
   date: new Date().toISOString().slice(0, 10),
   payment_method_id: props.paymentMethods?.[0]?.id ?? '',
+  cash_account_id: props.cashAccounts?.[0]?.id ?? '',
   note: '',
 });
 paymentAmountInput.value = formatInput(String(paymentForm.amount || 0));
@@ -62,6 +64,7 @@ const editPaymentForm = useForm({
   amount: 0,
   date: new Date().toISOString().slice(0, 10),
   payment_method_id: '',
+  cash_account_id: '',
   note: '',
 });
 
@@ -70,6 +73,7 @@ const openEditPaymentModal = (payment) => {
   editPaymentForm.amount = Number(payment.amount || 0);
   editPaymentForm.date = payment.date || new Date().toISOString().slice(0, 10);
   editPaymentForm.payment_method_id = payment.payment_method_id || props.paymentMethods?.[0]?.id || '';
+  editPaymentForm.cash_account_id = payment.cash_account_id || props.cashAccounts?.[0]?.id || '';
   editPaymentForm.note = payment.note || '';
   editPaymentAmountInput.value = formatInput(String(editPaymentForm.amount || 0));
   document.getElementById('modal-edit-invoice-payment')?.showModal();
@@ -96,6 +100,7 @@ const openPaymentModal = () => {
   paymentAmountInput.value = formatInput(String(paymentForm.amount || 0));
   paymentForm.date = new Date().toISOString().slice(0, 10);
   paymentForm.payment_method_id = props.paymentMethods?.[0]?.id ?? '';
+  paymentForm.cash_account_id = props.cashAccounts?.[0]?.id ?? '';
   document.getElementById('modal-add-invoice-payment')?.showModal();
 };
 
@@ -164,7 +169,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
               <div class="text-base-content/60">Client</div><div>{{ invoice.client }}</div>
               <div class="text-base-content/60">Kontak</div><div>{{ invoice.client_contact || '-' }}</div>
               <div class="text-base-content/60">Tipe</div><div>{{ invoice.project_type }}</div>
-              <div class="text-base-content/60">Mulai</div><div>{{ invoice.started_at || '-' }}</div>
+              <div class="text-base-content/60">Mulai</div><div>{{ formatDate(invoice.started_at) }}</div>
               <div class="text-base-content/60">Selesai</div><div class="whitespace-nowrap">{{ formatDate(invoice.finished_at) }}</div>
               <div class="text-base-content/60">Deskripsi</div><div>{{ invoice.description || '-' }}</div>
             </div>
@@ -261,7 +266,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
                 <div class="space-y-1">
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="badge badge-ghost badge-sm">{{ payment.payment_method_name || 'Metode N/A' }}</span>
-                    <span class="text-xs text-base-content/60">{{ payment.date }}</span>
+                    <span class="text-xs text-base-content/60">{{ formatDate(payment.date) }}</span>
                   </div>
                   <p class="text-sm text-base-content/80">{{ payment.note || 'Tanpa catatan pembayaran.' }}</p>
                   <p class="text-xs text-base-content/60">Dicatat oleh: {{ payment.creator_name || '-' }}</p>
@@ -304,6 +309,17 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
             <p v-if="paymentForm.errors.amount" class="text-error text-xs mt-1">{{ paymentForm.errors.amount }}</p>
           </div>
           <div>
+            <label class="label"><span class="label-text">Akun Kas/Bank</span></label>
+            <select v-model="paymentForm.cash_account_id" class="select select-bordered w-full" :disabled="!(cashAccounts || []).length">
+              <option value="" disabled>{{ (cashAccounts || []).length ? 'Pilih akun kas/bank' : 'Belum ada akun kas/bank aktif' }}</option>
+              <option v-for="account in (cashAccounts || [])" :key="account.id" :value="account.id">
+                {{ account.code }} - {{ account.name }}
+              </option>
+            </select>
+            <p v-if="!(cashAccounts || []).length" class="text-xs text-warning mt-1">Atur akun kas di Pengaturan COA atau ACCOUNTING_CASH_BANK_CODES di .env.</p>
+            <p v-if="paymentForm.errors.cash_account_id" class="text-error text-xs mt-1">{{ paymentForm.errors.cash_account_id }}</p>
+          </div>
+          <div>
             <label class="label"><span class="label-text">Metode Pembayaran</span></label>
             <select v-model="paymentForm.payment_method_id" class="select select-bordered w-full">
               <option value="" disabled>Pilih metode</option>
@@ -343,6 +359,16 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
               @input="editPaymentAmountInput = formatInput($event.target.value)"
             />
             <p v-if="editPaymentForm.errors.amount" class="text-error text-xs mt-1">{{ editPaymentForm.errors.amount }}</p>
+          </div>
+          <div>
+            <label class="label"><span class="label-text">Akun Kas/Bank</span></label>
+            <select v-model="editPaymentForm.cash_account_id" class="select select-bordered w-full" :disabled="!(cashAccounts || []).length">
+              <option value="" disabled>{{ (cashAccounts || []).length ? 'Pilih akun kas/bank' : 'Belum ada akun kas/bank aktif' }}</option>
+              <option v-for="account in (cashAccounts || [])" :key="account.id" :value="account.id">
+                {{ account.code }} - {{ account.name }}
+              </option>
+            </select>
+            <p v-if="editPaymentForm.errors.cash_account_id" class="text-error text-xs mt-1">{{ editPaymentForm.errors.cash_account_id }}</p>
           </div>
           <div>
             <label class="label"><span class="label-text">Metode Pembayaran</span></label>

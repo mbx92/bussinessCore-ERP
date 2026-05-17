@@ -6,6 +6,7 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   rows: Array,
@@ -14,6 +15,8 @@ const props = defineProps({
   cashAccounts: Array,
   filters: Object,
 });
+
+const { formatDate } = useDateFormat();
 
 const { format } = useCurrency();
 const page = usePage();
@@ -166,7 +169,7 @@ const destroyRow = (row) => {
             </thead>
             <tbody>
               <tr v-for="row in rows" :key="row.id">
-                <td>{{ row.date }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(row.date) }}</td>
                 <td class="font-medium">{{ row.project_name }}</td>
                 <td>{{ row.recipient_name || '-' }}</td>
                 <td class="font-semibold text-error">{{ format(row.amount) }}</td>

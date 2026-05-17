@@ -3,11 +3,14 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import StatusBadge from '@/Components/StatusBadge.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   detail: Object,
   warehouses: Array,
 });
+
+const { formatDate } = useDateFormat();
 
 const advanceForm = useForm({ action: 'post_stock', warehouse_id: props.detail?.warehouse_id ?? '' });
 
@@ -41,7 +44,7 @@ const goBack = () => {
               </Link>
               · {{ detail.warehouse }}
             </p>
-              <p class="ocn-panel__desc mt-1">Tanggal terima {{ detail.received_date }}</p>
+              <p class="ocn-panel__desc mt-1">Tanggal terima {{ formatDate(detail.received_date) }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
               <StatusBadge :status="detail.status" />

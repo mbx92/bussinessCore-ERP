@@ -5,11 +5,14 @@ import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   detail: Object,
   payment_methods: Array,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const { format } = useCurrency();
 
@@ -121,7 +124,7 @@ const printReceipt = async () => {
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sales Workspace</p>
               <h1 class="ocn-panel__title mt-1">{{ detail.number }}</h1>
-              <p class="ocn-panel__desc mt-1">Waktu transaksi: {{ detail.sold_at || '-' }} · Kasir: {{ detail.cashier || '-' }}</p>
+              <p class="ocn-panel__desc mt-1">Waktu transaksi: {{ formatDateTime(detail.sold_at) }} · Kasir: {{ detail.cashier || '-' }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
               <div class="flex items-center gap-2">

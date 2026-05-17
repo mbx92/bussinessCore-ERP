@@ -8,8 +8,11 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({ cashIns: Object, total: Number, projects: Array, paymentMethods: Array, cashAccounts: Array, categoryOptions: Array, filters: Object });
+
+const { formatDate } = useDateFormat();
 const { format } = useCurrency();
 const defaultCategory = (preferred) => props.categoryOptions?.some((category) => category.value === preferred)
     ? preferred
@@ -117,7 +120,7 @@ const doDelete = () => { router.delete(route('cash-in.destroy', deletingId.value
                         </thead>
                         <tbody>
                             <tr v-for="c in cashIns.data" :key="c.id">
-                                <td>{{ c.date }}</td>
+                                <td class="whitespace-nowrap">{{ formatDate(c.date) }}</td>
                                 <td class="font-medium">{{ c.project_name }}</td>
                                 <td>{{ c.payment_method_name || '-' }}</td>
                                 <td><span class="badge badge-sm badge-ghost">{{ categoryLabel(c.category) }}</span></td>

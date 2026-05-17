@@ -6,6 +6,9 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { reactive, ref, watch } from 'vue';
 import { showGlobalAlert } from '@/utils/globalAlert';
+import { useDateFormat } from '@/composables/useDateFormat';
+
+const { formatDate } = useDateFormat();
 
 const props = defineProps({
   purchaseOrders: Object,
@@ -155,7 +158,7 @@ const submitAdd = () => {
               <tr v-for="po in (purchaseOrders?.data || [])" :key="po.number" :class="rowClass()" tabindex="0" role="button" @click="openRow(po.number)" @keydown.enter.prevent="openRow(po.number)">
                 <td class="font-mono text-xs font-semibold">{{ po.number }}</td>
                 <td>{{ po.supplier }}</td>
-                <td>{{ po.eta }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(po.eta) }}</td>
                 <td>{{ formatIdr(po.amount) }}</td>
                 <td @click.stop><StatusBadge :status="po.status" /></td>
               </tr>

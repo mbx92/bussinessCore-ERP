@@ -18,6 +18,9 @@ import {ArrowLeftIcon,
   ChevronRightIcon,
   XMarkIcon,
   MapPinIcon,} from '@heroicons/vue/24/outline';
+import { formatDate } from '@/composables/useDateFormat';
+
+const WEEKDAYS_ID = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 const props = defineProps({
   events: Array,
@@ -190,8 +193,11 @@ const iconBg = {
 
 const formatSelectedDate = computed(() => {
   if (!selectedDate.value) return '';
-  const d = new Date(selectedDate.value + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const parts = selectedDate.value.slice(0, 10).split('-').map(Number);
+  if (parts.length !== 3) return formatDate(selectedDate.value);
+  const [year, month, day] = parts;
+  const weekday = WEEKDAYS_ID[new Date(year, month - 1, day).getDay()];
+  return `${weekday}, ${formatDate(selectedDate.value)}`;
 });
 
 const totalEvents = computed(() => (props.events || []).length);
@@ -214,10 +220,7 @@ const legendItems = [
   { color: 'bg-error', icon: BellAlertIcon, label: 'Follow-up / Hutang' },
 ];
 
-const formatEventDate = (dateStr) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-};
+const formatEventDate = (dateStr) => formatDate(dateStr);
 </script>
 
 <template>

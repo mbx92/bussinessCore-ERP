@@ -6,11 +6,14 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, reactive, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
     budget: Object,
     cctv_products: Array,
 });
+
+const { formatDate } = useDateFormat();
 const { format } = useCurrency();
 
 function normalizeCctvItems(raw) {
@@ -200,7 +203,7 @@ const downloadPdf = () => window.open(route('erp.projects.budgets.pdf', props.bu
                     </div>
                     <div v-if="budget.project_type === 'cctv_installation'"><span class="text-base-content/60">Estimasi HPP</span><div>{{ format(budget.total_cost ?? totalCctvCost) }}</div></div>
                     <div v-if="budget.project_type === 'cctv_installation'"><span class="text-base-content/60">Estimasi Margin</span><div class="font-semibold text-success">{{ format(budget.total_margin ?? totalCctvMargin) }}</div></div>
-                    <div><span class="text-base-content/60">Dibuat</span><div>{{ budget.created_at || '-' }}</div></div>
+                    <div><span class="text-base-content/60">Dibuat</span><div>{{ formatDate(budget.created_at) }}</div></div>
                     <div class="md:col-span-2"><span class="text-base-content/60">Deskripsi</span><div>{{ budget.description || '-' }}</div></div>
                 </div>
             </div>

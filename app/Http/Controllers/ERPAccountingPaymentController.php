@@ -17,7 +17,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -74,12 +73,7 @@ class ERPAccountingPaymentController extends Controller
                 'outstanding_total' => (float) $payables->sum('outstanding_amount'),
                 'open_count' => $payables->filter(fn (array $row) => $row['outstanding_amount'] > 0)->count(),
             ],
-            'cashAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->where('code', 'like', '100%')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
         ]);
     }
 
@@ -88,13 +82,7 @@ class ERPAccountingPaymentController extends Controller
         $validated = $request->validate([
             'payment_date' => 'required|date',
             'amount' => 'required|numeric|min:0.01',
-            'cash_account_id' => [
-                'required',
-                'integer',
-                Rule::exists('accounts', 'id')->where(fn ($query) => $query
-                    ->where('type', 'asset')
-                    ->where('is_active', true)),
-            ],
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'note' => 'nullable|string|max:1000',
         ]);
 
@@ -192,12 +180,7 @@ class ERPAccountingPaymentController extends Controller
             ],
             'filters' => $request->only(['user_id', 'year', 'status']),
             'years' => range(now()->year, now()->year - 4),
-            'cashAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->where('code', 'like', '100%')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
         ]);
     }
 
@@ -206,13 +189,7 @@ class ERPAccountingPaymentController extends Controller
         $validated = $request->validate([
             'payment_date' => 'required|date',
             'amount' => 'required|numeric|min:0.01',
-            'cash_account_id' => [
-                'required',
-                'integer',
-                Rule::exists('accounts', 'id')->where(fn ($query) => $query
-                    ->where('type', 'asset')
-                    ->where('is_active', true)),
-            ],
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'note' => 'nullable|string|max:1000',
         ]);
 

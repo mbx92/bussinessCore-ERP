@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 import {
   FolderIcon,
   DocumentIcon,
@@ -22,6 +23,8 @@ const props = defineProps({
   folders: Array,
   files: Array,
 });
+
+const { formatDate, formatDateTime } = useDateFormat();
 
 const folderForm = useForm({
   path: props.currentPath ?? '',
@@ -321,7 +324,7 @@ const doDelete = () => {
               </div>
               <p class="mt-2 w-full truncate text-xs font-medium leading-tight" :title="file.name">{{ file.name }}</p>
               <p class="mt-0.5 line-clamp-1 w-full text-[10px] text-base-content/50">
-                {{ file.size_kb }} KB · {{ file.modified_at }}
+                {{ file.size_kb }} KB · {{ formatDateTime(file.modified_at) }}
               </p>
               <span class="mt-1 badge badge-ghost badge-xs">{{ fileVisual(file).badge }}</span>
               <div class="mt-1 flex w-full flex-wrap justify-center gap-0.5 opacity-0 transition group-hover:opacity-100">

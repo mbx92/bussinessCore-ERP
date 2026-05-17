@@ -4,6 +4,9 @@ import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, ref } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
+
+const { formatDate } = useDateFormat();
 
 const props = defineProps({
     wallets: Array,
@@ -168,7 +171,7 @@ const editCategoryOptions = computed(() => (editForm.type === 'income' ? incomeC
             </thead>
             <tbody>
               <tr v-for="row in transactions" :key="row.id">
-                <td class="whitespace-nowrap font-mono text-xs">{{ row.occurred_on }}</td>
+                <td class="whitespace-nowrap text-xs">{{ formatDate(row.occurred_on) }}</td>
                 <td>
                   <span class="badge badge-sm" :class="row.type === 'income' ? 'badge-success' : 'badge-error'">{{ row.type }}</span>
                 </td>

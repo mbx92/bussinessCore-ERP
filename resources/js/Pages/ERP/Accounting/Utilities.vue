@@ -4,6 +4,7 @@ import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 import { computed, reactive, ref, watch } from 'vue';
+import { useDateFormat } from '@/composables/useDateFormat';
 
 const props = defineProps({
   companies: Array,
@@ -12,6 +13,8 @@ const props = defineProps({
   filters: Object,
   posChannelCorrection: Object,
 });
+
+const { formatDate } = useDateFormat();
 
 const filters = reactive({
   company_id: props.filters?.company_id ?? '',
@@ -236,7 +239,7 @@ const submitPosChannelCorrection = () => {
                   >
                 </td>
                 <td class="font-mono text-xs">{{ entry.entry_no }}</td>
-                <td>{{ entry.entry_date }}</td>
+                <td class="whitespace-nowrap">{{ formatDate(entry.entry_date) }}</td>
                 <td>{{ entry.company_name }}</td>
                 <td>
                   <span class="badge badge-ghost badge-sm">{{ entry.source_module || '-' }}</span>
@@ -328,7 +331,7 @@ const submitPosChannelCorrection = () => {
                     >
                   </td>
                   <td class="font-mono text-xs">{{ entry.entry_no }}</td>
-                  <td>{{ entry.entry_date }}</td>
+                  <td class="whitespace-nowrap">{{ formatDate(entry.entry_date) }}</td>
                   <td>{{ entry.company_name }}</td>
                   <td>
                     <span class="badge badge-ghost badge-sm">{{ entry.source_module || '-' }}</span>
