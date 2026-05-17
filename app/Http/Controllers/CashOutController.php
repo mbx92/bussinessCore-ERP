@@ -55,11 +55,7 @@ class CashOutController extends Controller
             'cashOuts' => $cashOuts,
             'total' => $total,
             'projects' => $projects,
-            'cashAccounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cashAccounts' => Account::cashBankOptions(),
             'categoryOptions' => $this->categoryOptions(),
             'filters' => $this->filtersWithPerPage($request, ['project_id', 'category', 'date_from', 'date_to']),
         ]);
@@ -69,7 +65,7 @@ class CashOutController extends Controller
     {
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'category' => 'required|string|max:50',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
@@ -110,7 +106,7 @@ class CashOutController extends Controller
     {
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'category' => 'required|string|max:50',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',

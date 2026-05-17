@@ -81,6 +81,7 @@ class AccountingUtilitiesTest extends TestCase
             'type' => 'asset',
             'normal_balance' => 'debit',
             'is_active' => true,
+            'is_cash_bank' => true,
         ]);
         $revenue = Account::query()->updateOrCreate(['code' => '4003'], [
             'name' => 'Pendapatan Project',
@@ -220,6 +221,89 @@ class AccountingUtilitiesTest extends TestCase
             'account_id' => $payable->id,
             'debit' => '0.00',
             'credit' => '6616.00',
+        ]);
+    }
+
+    public function test_accounting_utilities_can_reassign_cash_accounts_and_journal_lines(): void
+    {
+        $this->disableErpMiddleware();
+
+        $user = User::factory()->create();
+        $kas = Account::query()->updateOrCreate(['code' => '1001'], [
+            'name' => 'Kas',
+            'type' => 'asset',
+            'normal_balance' => 'debit',
+            'is_active' => true,
+            'is_cash_bank' => true,
+        ]);
+        $bca = Account::query()->updateOrCreate(['code' => '1002'], [
+            'name' => 'Bank BCA',
+            'type' => 'asset',
+            'normal_balance' => 'debit',
+            'is_active' => true,
+            'is_cash_bank' => true,
+        ]);
+        $revenue = Account::query()->updateOrCreate(['code' => '4003'], [
+            'name' => 'Pendapatan Project',
+            'type' => 'revenue',
+            'normal_balance' => 'credit',
+            'is_active' => true,
+        ]);
+
+        $entry = JournalEntry::query()->create([
+            'entry_no' => 'JE-REASSIGN-001',
+            'entry_date' => '2026-05-14',
+            'description' => 'Pembayaran invoice project',
+            'status' => 'posted',
+            'source_module' => 'project_invoice_payment',
+            'source_reference' => '1',
+        ]);
+        $debitLine = $entry->lines()->create([
+            'account_id' => $kas->id,
+            'debit' => 750000,
+            'credit' => 0,
+        ]);
+        $entry->lines()->create([
+            'account_id' => $revenue->id,
+            'debit' => 0,
+            'credit' => 750000,
+        ]);
+
+        $cashIn = CashIn::query()->create([
+            'amount' => 750000,
+            'date' => '2026-05-14',
+            'category' => 'pendapatan_project',
+            'journal_entry_id' => $entry->id,
+            'cash_account_id' => $kas->id,
+            'created_by' => $user->id,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->get(route('erp.accounting.utilities', ['reassign_from' => $kas->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('ERP/Accounting/Utilities')
+                ->where('cashAccountReassignment.cash_in_count', 1)
+                ->where('cashAccountReassignment.journal_lines_count', 1)
+                ->etc());
+
+        $this
+            ->actingAs($user)
+            ->post(route('erp.accounting.utilities.reassign-cash-accounts'), [
+                'from_account_id' => $kas->id,
+                'to_account_id' => $bca->id,
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('cash_in', [
+            'id' => $cashIn->id,
+            'cash_account_id' => $bca->id,
+        ]);
+        $this->assertDatabaseHas('journal_lines', [
+            'id' => $debitLine->id,
+            'account_id' => $bca->id,
         ]);
     }
 

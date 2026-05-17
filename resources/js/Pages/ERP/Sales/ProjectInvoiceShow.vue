@@ -316,7 +316,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
                 {{ account.code }} - {{ account.name }}
               </option>
             </select>
-            <p v-if="!(cashAccounts || []).length" class="text-xs text-warning mt-1">Atur akun kas di Pengaturan COA atau ACCOUNTING_CASH_BANK_CODES di .env.</p>
+            <p v-if="!(cashAccounts || []).length" class="text-xs text-warning mt-1">Centang &quot;Kas/Bank&quot; pada akun asset di Chart of Accounts.</p>
             <p v-if="paymentForm.errors.cash_account_id" class="text-error text-xs mt-1">{{ paymentForm.errors.cash_account_id }}</p>
           </div>
           <div>

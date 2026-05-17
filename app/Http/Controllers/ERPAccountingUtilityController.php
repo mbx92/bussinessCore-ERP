@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\ERP\Accounting\Models\Account;
 use App\ERP\Accounting\Models\JournalLine;
 use App\ERP\Accounting\Services\CashAccountIdBackfillService;
+use App\ERP\Accounting\Services\CashAccountReassignmentService;
 use App\ERP\Accounting\Services\CoaSettingService;
 use App\ERP\Accounting\Models\JournalEntry;
 use App\ERP\Core\Models\Company;
@@ -92,6 +93,47 @@ class ERPAccountingUtilityController extends Controller
             'filters' => $this->filtersWithPerPage($request, ['company_id', 'date_from', 'date_to', 'q']),
             'posChannelCorrection' => $this->posChannelCorrectionSummary($request),
             'cashAccountBackfill' => app(CashAccountIdBackfillService::class)->summary(),
+            'cashBankAccounts' => Account::cashBankOptions()->map(fn (Account $account) => [
+                'id' => $account->id,
+                'label' => $account->displayLabel(),
+            ])->values(),
+            'cashAccountUsage' => app(CashAccountReassignmentService::class)->countsBySourceAccount(),
+            'cashAccountReassignment' => $this->cashAccountReassignmentPreview($request),
+        ]);
+    }
+
+    public function reassignCashAccounts(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'from_account_id' => Account::cashBankIdValidationRules(),
+            'to_account_id' => Account::cashBankIdValidationRules(),
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+
+        $fromAccountId = (int) $validated['from_account_id'];
+        $toAccountId = (int) $validated['to_account_id'];
+
+        if ($fromAccountId === $toAccountId) {
+            throw ValidationException::withMessages([
+                'to_account_id' => 'Akun tujuan harus berbeda dari akun sumber.',
+            ]);
+        }
+
+        $result = app(CashAccountReassignmentService::class)->apply(
+            $fromAccountId,
+            $toAccountId,
+            $validated['date_from'] ?? null,
+            $validated['date_to'] ?? null,
+        );
+
+        $total = $result['cash_in_updated'] + $result['cash_out_updated'];
+
+        return back()->with('flash', [
+            'type' => $total > 0 ? 'success' : 'info',
+            'message' => $total > 0
+                ? "Akun kas/bank dipindahkan: {$result['cash_in_updated']} kas masuk, {$result['cash_out_updated']} kas keluar, {$result['journal_lines_updated']} baris jurnal."
+                : 'Tidak ada transaksi yang cocok dengan filter.',
         ]);
     }
 
@@ -310,5 +352,31 @@ class ERPAccountingUtilityController extends Controller
     private function accountLabel(Account $account): string
     {
         return $account->code.' - '.$account->name;
+    }
+
+    private function cashAccountReassignmentPreview(Request $request): ?array
+    {
+        if (! $request->filled('reassign_from')) {
+            return null;
+        }
+
+        $fromAccountId = $request->integer('reassign_from');
+        $accounts = Account::cashBankOptions();
+        if (! $accounts->contains('id', $fromAccountId)) {
+            return null;
+        }
+
+        $fromAccount = $accounts->firstWhere('id', $fromAccountId);
+        $preview = app(CashAccountReassignmentService::class)->preview(
+            $fromAccountId,
+            $request->filled('date_from') ? $request->string('date_from')->toString() : null,
+            $request->filled('date_to') ? $request->string('date_to')->toString() : null,
+        );
+
+        return [
+            'from_account_id' => $fromAccountId,
+            'from_account_label' => $fromAccount?->displayLabel(),
+            ...$preview,
+        ];
     }
 }

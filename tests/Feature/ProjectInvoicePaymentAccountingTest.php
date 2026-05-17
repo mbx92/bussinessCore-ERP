@@ -112,6 +112,7 @@ class ProjectInvoicePaymentAccountingTest extends TestCase
                 'type' => $type,
                 'normal_balance' => $normalBalance,
                 'is_active' => true,
+                'is_cash_bank' => $type === 'asset' && preg_match('/kas|bank|cash|giro/i', $name) === 1,
             ]
         );
     }

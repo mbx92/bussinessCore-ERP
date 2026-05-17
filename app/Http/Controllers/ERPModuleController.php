@@ -16,6 +16,7 @@ class ERPModuleController extends Controller
             ['title' => 'Utilitas Accounting', 'description' => 'Pindahkan jurnal antar usaha, koreksi COA POS, dan lengkapi akun kas transaksi lama.', 'route' => 'erp.accounting.utilities', 'icon' => 'wrench'],
             ['title' => 'Expenses Tim / Project', 'description' => 'Input biaya tim, operasional, referral, dan pengeluaran project. Pemasukan project tetap dari invoice/termin.', 'route' => 'cash-out.index', 'icon' => 'arrow-up-circle'],
             ['title' => 'Cashflow Accounting', 'description' => 'Ringkasan arus kas dari invoice, POS, supplier payment, dan expenses.', 'route' => 'erp.accounting.cashflow', 'icon' => 'arrows-right-left'],
+            ['title' => 'Mutasi Kas/Bank', 'description' => 'Transfer dana antar akun kas/bank (mis. bank ke kas kecil) tanpa mempengaruhi laba rugi.', 'route' => 'erp.accounting.cash-bank-transfer', 'icon' => 'arrows-right-left'],
             ['title' => 'Operational', 'description' => 'View cepat untuk biaya operasional umum atau per project.', 'route' => 'erp.accounting.operational', 'icon' => 'arrow-up-circle'],
             ['title' => 'Kategori Pengeluaran', 'description' => 'Mapping kategori expenses ke akun CoA.', 'route' => 'erp.accounting.expense-categories', 'icon' => 'book-open'],
             ['title' => 'Saldo Awal', 'description' => 'Input jurnal pembuka awal periode langsung ke General Ledger.', 'route' => 'erp.accounting.opening-balance', 'icon' => 'scale'],

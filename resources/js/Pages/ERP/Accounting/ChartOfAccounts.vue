@@ -56,6 +56,7 @@ const coaForm = useForm({
   type: 'asset',
   normal_balance: 'debit',
   is_active: true,
+  is_cash_bank: false,
 });
 
 const openAddModal = () => {
@@ -63,6 +64,7 @@ const openAddModal = () => {
   coaForm.type = 'asset';
   coaForm.normal_balance = 'debit';
   coaForm.is_active = true;
+  coaForm.is_cash_bank = false;
   document.getElementById('modal-add-coa')?.showModal();
 };
 
@@ -81,6 +83,7 @@ const editForm = useForm({
   type: 'asset',
   normal_balance: 'debit',
   is_active: true,
+  is_cash_bank: false,
 });
 
 const openEditModal = (account) => {
@@ -91,8 +94,21 @@ const openEditModal = (account) => {
   editForm.type = account.type;
   editForm.normal_balance = account.normal_balance;
   editForm.is_active = account.status === 'active';
+  editForm.is_cash_bank = Boolean(account.is_cash_bank);
   document.getElementById('modal-edit-coa')?.showModal();
 };
+
+watch(() => coaForm.type, (type) => {
+  if (type !== 'asset') {
+    coaForm.is_cash_bank = false;
+  }
+});
+
+watch(() => editForm.type, (type) => {
+  if (type !== 'asset') {
+    editForm.is_cash_bank = false;
+  }
+});
 
 const submitEdit = () => {
   if (!selectedAccount.value) return;
@@ -193,13 +209,14 @@ const executeDeleteCoa = () => {
                 <th>Nama Akun</th>
                 <th>Type</th>
                 <th>Normal Balance</th>
+                <th>Kas/Bank</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <template v-for="group in groupedAccounts" :key="group.type">
                 <tr class="bg-base-200/80">
-                  <td colspan="5" class="py-3">
+                  <td colspan="6" class="py-3">
                     <div class="flex items-center justify-between">
                       <div class="font-semibold uppercase tracking-wide text-sm">{{ group.label }}</div>
                       <div class="text-xs text-base-content/60">{{ group.rows.length }} akun</div>
@@ -219,11 +236,15 @@ const executeDeleteCoa = () => {
                   <td class="font-semibold">{{ account.name }}</td>
                   <td class="uppercase text-xs">{{ account.type }}</td>
                   <td class="uppercase text-xs">{{ account.normal_balance }}</td>
+                  <td>
+                    <span v-if="account.is_cash_bank" class="badge badge-primary badge-sm">Ya</span>
+                    <span v-else class="text-base-content/40">—</span>
+                  </td>
                   <td><StatusBadge :status="account.status" /></td>
                 </tr>
               </template>
               <tr v-if="!groupedAccounts.length">
-                <td colspan="5" class="py-8 text-center text-base-content/50">Tidak ada akun ditemukan.</td>
+                <td colspan="6" class="py-8 text-center text-base-content/50">Tidak ada akun ditemukan.</td>
               </tr>
             </tbody>
           </table>
@@ -260,10 +281,14 @@ const executeDeleteCoa = () => {
             </select>
             <p v-if="coaForm.errors.normal_balance" class="text-error text-xs mt-1">{{ coaForm.errors.normal_balance }}</p>
           </div>
-          <div class="md:col-span-2">
+          <div class="md:col-span-2 flex flex-wrap gap-6">
             <label class="flex items-center gap-2 text-sm">
               <input v-model="coaForm.is_active" type="checkbox" class="toggle toggle-primary toggle-sm" />
               <span>Aktif</span>
+            </label>
+            <label v-if="coaForm.type === 'asset'" class="flex items-center gap-2 text-sm">
+              <input v-model="coaForm.is_cash_bank" type="checkbox" class="toggle toggle-secondary toggle-sm" />
+              <span>Kas/Bank (penerimaan &amp; pembayaran)</span>
             </label>
           </div>
         </div>
@@ -322,10 +347,14 @@ const executeDeleteCoa = () => {
             </select>
             <p v-if="editForm.errors.normal_balance" class="text-error text-xs mt-1">{{ editForm.errors.normal_balance }}</p>
           </div>
-          <div class="md:col-span-2">
+          <div class="md:col-span-2 flex flex-wrap gap-6">
             <label class="flex items-center gap-2 text-sm">
               <input v-model="editForm.is_active" type="checkbox" class="toggle toggle-primary toggle-sm" />
               <span>Aktif</span>
+            </label>
+            <label v-if="editForm.type === 'asset'" class="flex items-center gap-2 text-sm">
+              <input v-model="editForm.is_cash_bank" type="checkbox" class="toggle toggle-secondary toggle-sm" />
+              <span>Kas/Bank (penerimaan &amp; pembayaran)</span>
             </label>
           </div>
         </div>

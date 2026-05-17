@@ -233,7 +233,7 @@ const paidPayables = computed(() => (props.payables ?? []).filter((row) => Numbe
                 </option>
               </select>
               <p v-if="!(cashAccounts || []).length" class="mt-1 text-xs text-warning">
-                Tidak ada akun kas/bank. Atur di Pengaturan COA (Kas POS / Kas invoice project), env ACCOUNTING_CASH_BANK_CODES (mis. 1101,1102), atau nama akun yang mengandung Kas/Bank.
+                Tidak ada akun kas/bank. Centang &quot;Kas/Bank (penerimaan &amp; pembayaran)&quot; pada akun asset di Chart of Accounts.
               </p>
               <p v-if="paymentForm.errors.cash_account_id" class="mt-1 text-xs text-error">{{ paymentForm.errors.cash_account_id }}</p>
             </div>

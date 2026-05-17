@@ -83,7 +83,7 @@ class CashflowController extends Controller
             'type' => 'required|in:in,out',
             'project_id' => 'nullable|uuid|exists:projects,id',
             'payment_method_id' => 'nullable|exists:payment_methods,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'category' => 'required|string|max:50',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
@@ -109,7 +109,7 @@ class CashflowController extends Controller
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
             'payment_method_id' => 'nullable|exists:payment_methods,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'category' => 'required|string|max:50',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
@@ -128,7 +128,7 @@ class CashflowController extends Controller
         $this->authorizeMutation($cashOut->created_by);
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'category' => 'required|string|max:50',
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',

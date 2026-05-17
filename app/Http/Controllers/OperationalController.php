@@ -76,7 +76,7 @@ class OperationalController extends Controller
     {
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
             'note' => 'nullable|string|max:1000',
@@ -129,7 +129,7 @@ class OperationalController extends Controller
 
         $validated = $request->validate([
             'project_id' => 'nullable|uuid|exists:projects,id',
-            'cash_account_id' => 'required|exists:accounts,id',
+            'cash_account_id' => Account::cashBankIdValidationRules(),
             'amount' => 'required|numeric|min:1',
             'date' => 'required|date',
             'note' => 'nullable|string|max:1000',

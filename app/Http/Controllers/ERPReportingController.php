@@ -59,6 +59,7 @@ class ERPReportingController extends Controller
                     'type' => $account->type,
                     'normal_balance' => $account->normal_balance,
                     'status' => $account->is_active ? 'active' : 'inactive',
+                    'is_cash_bank' => (bool) $account->is_cash_bank,
                     ...$usage,
                 ];
             }),
@@ -273,6 +274,7 @@ class ERPReportingController extends Controller
             'type' => 'required|in:asset,liability,equity,revenue,expense',
             'normal_balance' => 'required|in:debit,credit',
             'is_active' => 'nullable|boolean',
+            'is_cash_bank' => 'nullable|boolean',
         ]);
 
         Account::query()->create([
@@ -281,6 +283,7 @@ class ERPReportingController extends Controller
             'type' => $validated['type'],
             'normal_balance' => $validated['normal_balance'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
+            'is_cash_bank' => $validated['type'] === 'asset' && (bool) ($validated['is_cash_bank'] ?? false),
         ]);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Akun CoA berhasil ditambahkan.']);
@@ -299,6 +302,7 @@ class ERPReportingController extends Controller
             'type' => ['required', 'in:asset,liability,equity,revenue,expense'],
             'normal_balance' => ['required', 'in:debit,credit'],
             'is_active' => ['nullable', 'boolean'],
+            'is_cash_bank' => ['nullable', 'boolean'],
         ]);
 
         $account->update([
@@ -307,6 +311,7 @@ class ERPReportingController extends Controller
             'type' => $validated['type'],
             'normal_balance' => $validated['normal_balance'],
             'is_active' => (bool) ($validated['is_active'] ?? true),
+            'is_cash_bank' => $validated['type'] === 'asset' && (bool) ($validated['is_cash_bank'] ?? false),
         ]);
 
         return back()->with('flash', ['type' => 'success', 'message' => 'Akun CoA berhasil diperbarui.']);

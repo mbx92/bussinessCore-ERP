@@ -67,10 +67,16 @@ class CoaSeeder extends Seeder
             ['code' => '5016', 'name' => 'Beban Admin Channel Penjualan POS', 'type' => 'expense', 'normal_balance' => 'debit'],
         ];
 
+        $cashBankCodes = ['1001', '1002', '1003', '1004'];
+
         foreach ($accounts as $account) {
-            Account::query()->firstOrCreate(
+            Account::query()->updateOrCreate(
                 ['code' => $account['code']],
-                $account
+                [
+                    ...$account,
+                    'is_cash_bank' => $account['type'] === 'asset'
+                        && in_array($account['code'], $cashBankCodes, true),
+                ]
             );
         }
 

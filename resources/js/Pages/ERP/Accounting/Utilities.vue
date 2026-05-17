@@ -1,5 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
+import ConfirmModal from '@/Components/ConfirmModal.vue';
 import DataTablePagination from '@/Components/DataTablePagination.vue';
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
@@ -13,6 +14,9 @@ const props = defineProps({
   filters: Object,
   posChannelCorrection: Object,
   cashAccountBackfill: Object,
+  cashBankAccounts: Array,
+  cashAccountUsage: Array,
+  cashAccountReassignment: Object,
 });
 
 const { formatDate } = useDateFormat();
@@ -33,6 +37,12 @@ const correctionForm = useForm({
   journal_entry_ids: [],
 });
 const backfillForm = useForm({});
+const reassignForm = useForm({
+  from_account_id: '',
+  to_account_id: '',
+  date_from: '',
+  date_to: '',
+});
 
 const backfillReadyTotal = computed(
   () => (props.cashAccountBackfill?.cash_in_ready ?? 0) + (props.cashAccountBackfill?.cash_out_ready ?? 0),
@@ -40,6 +50,21 @@ const backfillReadyTotal = computed(
 const backfillPendingTotal = computed(
   () => (props.cashAccountBackfill?.cash_in_pending ?? 0) + (props.cashAccountBackfill?.cash_out_pending ?? 0),
 );
+const backfillConfirmMessage = computed(
+  () =>
+    `Lengkapi akun kas pada ${backfillReadyTotal.value} transaksi dari jurnal yang sudah diposting? Jurnal GL tidak diubah.`,
+);
+
+const reassignPreview = computed(() => props.cashAccountReassignment ?? null);
+const reassignTotal = computed(
+  () => (reassignPreview.value?.cash_in_count ?? 0) + (reassignPreview.value?.cash_out_count ?? 0),
+);
+const reassignConfirmMessage = computed(() => {
+  const from = reassignPreview.value?.from_account_label ?? 'akun sumber';
+  const to = cashBankAccounts.value.find((a) => String(a.id) === String(reassignForm.to_account_id))?.label ?? 'akun tujuan';
+  return `Pindahkan ${reassignTotal.value} transaksi dari ${from} ke ${to}? Baris jurnal kas/bank ikut diperbarui.`;
+});
+const cashBankAccounts = computed(() => props.cashBankAccounts ?? []);
 
 const format = (n) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
@@ -88,7 +113,11 @@ const toggleCorrectionCandidates = (checked) => {
 };
 
 const applyFilters = () => {
-  router.get(route('erp.accounting.utilities'), filters, { preserveState: true, replace: true });
+  const params = { ...filters };
+  if (reassignForm.from_account_id) {
+    params.reassign_from = reassignForm.from_account_id;
+  }
+  router.get(route('erp.accounting.utilities'), params, { preserveState: true, replace: true });
 };
 
 let timer;
@@ -101,6 +130,16 @@ watch(() => props.entries?.data, () => {
   const visible = new Set(selectableIds.value);
   selectedEntryIds.value = selectedEntryIds.value.filter((id) => visible.has(id));
 });
+
+watch(
+  () => props.cashAccountReassignment?.from_account_id,
+  (fromId) => {
+    if (fromId) {
+      reassignForm.from_account_id = fromId;
+    }
+  },
+  { immediate: true },
+);
 
 const resetFilters = () => {
   filters.company_id = '';
@@ -131,11 +170,41 @@ const submitPosChannelCorrection = () => {
   });
 };
 
-const submitCashAccountBackfill = () => {
-  if (!window.confirm(`Lengkapi akun kas pada ${backfillReadyTotal.value} transaksi dari jurnal yang sudah diposting? Jurnal tidak diubah.`)) {
+const openBackfillModal = () => {
+  document.getElementById('modal-confirm-backfill-cash-accounts')?.showModal();
+};
+
+const confirmCashAccountBackfill = () => {
+  backfillForm.post(route('erp.accounting.utilities.backfill-cash-accounts'), { preserveScroll: true });
+};
+
+const loadReassignPreview = () => {
+  if (!reassignForm.from_account_id) {
     return;
   }
-  backfillForm.post(route('erp.accounting.utilities.backfill-cash-accounts'), { preserveScroll: true });
+  router.get(
+    route('erp.accounting.utilities'),
+    {
+      ...filters,
+      reassign_from: reassignForm.from_account_id,
+    },
+    { preserveState: true, replace: true },
+  );
+};
+
+const openReassignModal = () => {
+  reassignForm.date_from = filters.date_from;
+  reassignForm.date_to = filters.date_to;
+  document.getElementById('modal-confirm-reassign-cash-accounts')?.showModal();
+};
+
+const confirmCashAccountReassign = () => {
+  reassignForm.post(route('erp.accounting.utilities.reassign-cash-accounts'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      reassignForm.reset('from_account_id', 'to_account_id', 'date_from', 'date_to');
+    },
+  });
 };
 </script>
 
@@ -149,7 +218,7 @@ const submitCashAccountBackfill = () => {
             <div>
               <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Accounting Workspace</p>
               <h1 class="ocn-panel__title mt-1">Utilitas Accounting</h1>
-              <p class="ocn-panel__desc mt-1">Perbaikan data accounting dari browser: pindah jurnal antar usaha, koreksi COA POS, dan lengkapi akun kas transaksi lama.</p>
+              <p class="ocn-panel__desc mt-1">Perbaikan data accounting dari browser: pindah jurnal antar usaha, koreksi akun kas/bank salah, koreksi COA POS, dan lengkapi akun kas transaksi lama.</p>
             </div>
             <Link class="btn btn-ghost btn-sm shrink-0 gap-1.5" :href="route('erp.accounting')">
               <ArrowLeftIcon class="h-4 w-4" />
@@ -290,7 +359,7 @@ const submitCashAccountBackfill = () => {
             type="button"
             class="btn btn-primary btn-sm"
             :disabled="backfillReadyTotal === 0 || backfillForm.processing"
-            @click="submitCashAccountBackfill"
+            @click="openBackfillModal"
           >
             {{ backfillForm.processing ? 'Memproses...' : `Perbaiki ${backfillReadyTotal} transaksi` }}
           </button>
@@ -345,6 +414,111 @@ const submitCashAccountBackfill = () => {
                   <td class="max-w-xs truncate">{{ row.note || '-' }}</td>
                   <td class="text-right font-semibold">{{ format(row.amount) }}</td>
                   <td class="text-sm">{{ row.resolved_account }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="ocn-panel">
+        <div class="ocn-panel__head flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h2 class="ocn-panel__title">Pindahkan akun kas/bank salah</h2>
+            <p class="ocn-panel__desc mt-1">
+              Untuk kas masuk/keluar yang tercatat di akun kas padahal seharusnya bank (atau sebaliknya).
+              Memperbarui kolom sumber dana dan baris jurnal GL pada sisi kas/bank.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            :disabled="!reassignForm.from_account_id || !reassignForm.to_account_id || reassignTotal === 0 || reassignForm.processing"
+            @click="openReassignModal"
+          >
+            {{ reassignForm.processing ? 'Memindahkan...' : `Pindahkan ${reassignTotal} transaksi` }}
+          </button>
+        </div>
+        <div class="card-body pt-0">
+          <div class="grid gap-3 md:grid-cols-3">
+            <div>
+              <label class="label py-0"><span class="label-text text-xs uppercase tracking-wide">Akun salah (dari)</span></label>
+              <select v-model="reassignForm.from_account_id" class="select select-sm select-bordered w-full" @change="loadReassignPreview">
+                <option value="">Pilih akun sumber</option>
+                <option v-for="account in cashBankAccounts" :key="account.id" :value="account.id">{{ account.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="label py-0"><span class="label-text text-xs uppercase tracking-wide">Akun benar (ke)</span></label>
+              <select v-model="reassignForm.to_account_id" class="select select-sm select-bordered w-full">
+                <option value="">Pilih akun tujuan</option>
+                <option
+                  v-for="account in cashBankAccounts"
+                  :key="`to-${account.id}`"
+                  :value="account.id"
+                  :disabled="String(account.id) === String(reassignForm.from_account_id)"
+                >
+                  {{ account.label }}
+                </option>
+              </select>
+            </div>
+            <div class="flex items-end">
+              <button type="button" class="btn btn-ghost btn-sm" :disabled="!reassignForm.from_account_id" @click="loadReassignPreview">
+                Muat ulang pratinjau
+              </button>
+            </div>
+          </div>
+          <p class="mt-3 text-xs text-base-content/50">
+            Pratinjau memakai filter tanggal di atas. Untuk satu pembayaran invoice project, Anda juga bisa mengubah akun lewat halaman invoice project.
+          </p>
+          <div v-if="cashAccountUsage?.length" class="mt-4 flex flex-wrap gap-2">
+            <span
+              v-for="row in cashAccountUsage"
+              :key="row.account_id"
+              class="badge badge-ghost badge-sm cursor-pointer"
+              :class="{ 'badge-primary': String(reassignForm.from_account_id) === String(row.account_id) }"
+              @click="reassignForm.from_account_id = row.account_id; loadReassignPreview()"
+            >
+              {{ row.label }}: {{ row.cash_in_count }} masuk · {{ row.cash_out_count }} keluar
+            </span>
+          </div>
+          <div v-if="reassignPreview" class="mt-4 grid gap-3 md:grid-cols-3">
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Kas masuk</p>
+              <p class="mt-1 text-sm font-semibold">{{ reassignPreview.cash_in_count }}</p>
+            </div>
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Kas keluar</p>
+              <p class="mt-1 text-sm font-semibold">{{ reassignPreview.cash_out_count }}</p>
+            </div>
+            <div class="rounded-lg border border-base-300 bg-base-100 p-3">
+              <p class="text-xs uppercase tracking-wide text-base-content/50">Baris jurnal</p>
+              <p class="mt-1 text-sm font-semibold">{{ reassignPreview.journal_lines_count }}</p>
+            </div>
+          </div>
+          <p v-else-if="reassignForm.from_account_id" class="mt-3 rounded-lg border border-base-300 bg-base-100 p-3 text-sm text-base-content/60">
+            Pilih akun sumber untuk melihat pratinjau transaksi yang akan dipindahkan.
+          </p>
+          <div v-if="reassignPreview?.samples?.length" class="mt-4 overflow-x-auto rounded-lg border border-base-300">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Jenis</th>
+                  <th>Tanggal</th>
+                  <th>Kategori</th>
+                  <th>Catatan</th>
+                  <th class="text-right">Nominal</th>
+                  <th>Jurnal</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in reassignPreview.samples" :key="`${row.domain}-${row.id}`">
+                  <td><span class="badge badge-ghost badge-sm">{{ row.domain === 'cash_in' ? 'Masuk' : 'Keluar' }}</span></td>
+                  <td class="whitespace-nowrap">{{ formatDate(row.date) }}</td>
+                  <td>{{ row.category || '-' }}</td>
+                  <td class="max-w-xs truncate">{{ row.note || '-' }}</td>
+                  <td class="text-right font-semibold">{{ format(row.amount) }}</td>
+                  <td>{{ row.has_journal ? 'Ada' : 'Tidak ada' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -443,5 +617,22 @@ const submitCashAccountBackfill = () => {
         </div>
       </div>
     </div>
+
+    <ConfirmModal
+      id="modal-confirm-reassign-cash-accounts"
+      title="Pindahkan akun kas/bank"
+      :message="reassignConfirmMessage"
+      confirm-text="Pindahkan"
+      confirm-class="btn-primary"
+      @confirm="confirmCashAccountReassign"
+    />
+    <ConfirmModal
+      id="modal-confirm-backfill-cash-accounts"
+      title="Lengkapi akun kas transaksi lama"
+      :message="backfillConfirmMessage"
+      confirm-text="Perbaiki"
+      confirm-class="btn-primary"
+      @confirm="confirmCashAccountBackfill"
+    />
   </AppLayout>
 </template>

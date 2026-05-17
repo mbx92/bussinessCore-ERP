@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CashBankTransferController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashInController;
 use App\Http\Controllers\CashOutController;
@@ -73,6 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/accounting/cash-flow', fn () => redirect()->route('erp.accounting.cashflow', request()->query()))->name('erp.accounting.cashflow.redirect-legacy');
         Route::get('erp/accounting/opening-balance', [ERPAccountingOpeningBalanceController::class, 'index'])->name('erp.accounting.opening-balance');
         Route::get('erp/accounting/utilities', [ERPAccountingUtilityController::class, 'index'])->name('erp.accounting.utilities');
+        Route::get('erp/accounting/mutasi-kas-bank', [CashBankTransferController::class, 'index'])->name('erp.accounting.cash-bank-transfer');
     });
 
     Route::middleware('role_or_permission:admin|manajer|finance|erp.accounting.post-journal')->group(function () {
@@ -85,6 +87,8 @@ Route::middleware('auth')->group(function () {
         Route::post('erp/accounting/utilities/move-journals', [ERPAccountingUtilityController::class, 'moveJournalEntries'])->name('erp.accounting.utilities.move-journals');
         Route::post('erp/accounting/utilities/correct-pos-channel-payable', [ERPAccountingUtilityController::class, 'correctPosChannelPayable'])->name('erp.accounting.utilities.correct-pos-channel-payable');
         Route::post('erp/accounting/utilities/backfill-cash-accounts', [ERPAccountingUtilityController::class, 'backfillCashAccountIds'])->name('erp.accounting.utilities.backfill-cash-accounts');
+        Route::post('erp/accounting/utilities/reassign-cash-accounts', [ERPAccountingUtilityController::class, 'reassignCashAccounts'])->name('erp.accounting.utilities.reassign-cash-accounts');
+        Route::post('erp/accounting/mutasi-kas-bank', [CashBankTransferController::class, 'store'])->name('erp.accounting.cash-bank-transfer.store');
     });
 
     // Projects (Admin + Manajer)

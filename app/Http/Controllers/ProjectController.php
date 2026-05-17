@@ -276,11 +276,7 @@ class ProjectController extends Controller
                 'id' => $role->id,
                 'name' => $role->name,
             ]),
-            'cash_accounts' => Account::query()
-                ->where('is_active', true)
-                ->where('type', 'asset')
-                ->orderBy('code')
-                ->get(['id', 'code', 'name']),
+            'cash_accounts' => Account::cashBankOptions(),
             'cash_category_options' => [
                 'out' => $cashOutCategories,
                 'labels' => $cashCategoryLabels,

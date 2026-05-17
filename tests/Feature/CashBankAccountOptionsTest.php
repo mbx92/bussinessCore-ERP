@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\ERP\Accounting\Models\Account;
-use App\ERP\Accounting\Models\CoaSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -13,70 +12,41 @@ class CashBankAccountOptionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        config([
-            'accounting.cash_bank_account_codes' => ['1101', '1102'],
-        ]);
-    }
-
-    public function test_cash_bank_options_use_config_codes_not_only_100x_prefix(): void
+    public function test_cash_bank_options_only_include_flagged_active_asset_accounts(): void
     {
         $kas = Account::query()->create([
-            'code' => '1101',
-            'name' => 'Kas Operasional',
+            'code' => '1001',
+            'name' => 'Kas',
             'type' => 'asset',
             'normal_balance' => 'debit',
             'is_active' => true,
+            'is_cash_bank' => true,
         ]);
         Account::query()->create([
-            'code' => '1102',
+            'code' => '1002',
             'name' => 'Bank BCA',
             'type' => 'asset',
             'normal_balance' => 'debit',
             'is_active' => true,
+            'is_cash_bank' => true,
         ]);
         Account::query()->create([
-            'code' => '1001',
-            'name' => 'Kas Lama (dev)',
+            'code' => '1101',
+            'name' => 'Piutang Usaha',
             'type' => 'asset',
             'normal_balance' => 'debit',
             'is_active' => true,
+            'is_cash_bank' => false,
         ]);
 
         $options = Account::cashBankOptions();
 
         $this->assertCount(2, $options);
         $this->assertTrue($options->contains('id', $kas->id));
-        $this->assertSame(['1101', '1102'], $options->pluck('code')->sort()->values()->all());
+        $this->assertSame(['1001', '1002'], $options->pluck('code')->sort()->values()->all());
     }
 
-    public function test_cash_bank_options_from_coa_settings_when_config_empty(): void
-    {
-        config(['accounting.cash_bank_account_codes' => []]);
-
-        $kas = Account::query()->create([
-            'code' => '1101',
-            'name' => 'Kas',
-            'type' => 'asset',
-            'normal_balance' => 'debit',
-            'is_active' => true,
-        ]);
-
-        CoaSetting::query()->create([
-            'key' => 'project_invoice_cash_account',
-            'account_id' => $kas->id,
-        ]);
-
-        $options = Account::cashBankOptions();
-
-        $this->assertCount(1, $options);
-        $this->assertSame('1101', $options->first()->code);
-    }
-
-    public function test_payments_page_lists_production_style_cash_accounts(): void
+    public function test_payments_page_lists_all_flagged_cash_bank_accounts(): void
     {
         $this->withoutMiddleware([
             \App\Http\Middleware\ErpMaintenanceMode::class,
@@ -84,13 +54,16 @@ class CashBankAccountOptionsTest extends TestCase
             \Spatie\Permission\Middleware\RoleMiddleware::class,
         ]);
 
-        Account::query()->create([
-            'code' => '1101',
-            'name' => 'Kas',
-            'type' => 'asset',
-            'normal_balance' => 'debit',
-            'is_active' => true,
-        ]);
+        foreach (['1001' => 'Kas', '1002' => 'Bank BCA', '1003' => 'Bank Mandiri'] as $code => $name) {
+            Account::query()->create([
+                'code' => $code,
+                'name' => $name,
+                'type' => 'asset',
+                'normal_balance' => 'debit',
+                'is_active' => true,
+                'is_cash_bank' => true,
+            ]);
+        }
 
         $user = User::factory()->create();
 
@@ -99,7 +72,7 @@ class CashBankAccountOptionsTest extends TestCase
             ->get(route('erp.accounting.payments'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->has('cashAccounts', 1)
-                ->where('cashAccounts.0.code', '1101'));
+                ->component('ERP/Accounting/Payments')
+                ->has('cashAccounts', 3));
     }
 }
