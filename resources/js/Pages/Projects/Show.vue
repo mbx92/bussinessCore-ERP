@@ -276,11 +276,7 @@ const deleteTask = (task) => {
     router.delete(route('projects.tasks.destroy', { project: props.project.id, task: task.id }), { preserveScroll: true });
 };
 
-const projectTypeLabel = (value) => {
-    if (value === 'cctv_installation') return 'CCTV Installation';
-    if (value === 'system_website_development') return 'System/Website Development';
-    return value;
-};
+const projectTypeLabel = () => props.project?.project_type_label ?? props.project?.project_type ?? '-';
 
 const roleLabel = (role) => role;
 
@@ -298,8 +294,8 @@ const taskCardClass = (status) => {
     return 'border-base-300';
 };
 
-const canShowKanban = computed(() => props.project?.project_type === 'system_website_development');
-const isCctvProject = computed(() => props.project?.project_type === 'cctv_installation');
+const canShowKanban = computed(() => !!props.project?.supports_project_board);
+const isCctvProject = computed(() => !!props.project?.supports_budget_items);
 const materialSummary = computed(() => {
     const materials = props.project?.materials ?? [];
 
@@ -518,7 +514,7 @@ const deleteProject = () => {
               <h1 class="ocn-panel__title mt-1">{{ project.name }}</h1>
               <p class="text-sm text-base-content/60 mt-1">{{ project.client_name }}</p>
                         <p class="ocn-panel__desc mt-1">Pantau progres project, keuangan, material, tim, dan task dalam satu halaman.</p>
-                        <span class="badge badge-ghost badge-sm mt-1">{{ projectTypeLabel(project.project_type) }}</span>
+                        <span class="badge badge-ghost badge-sm mt-1">{{ projectTypeLabel() }}</span>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
               <div class="flex flex-wrap justify-end gap-2">
@@ -636,7 +632,7 @@ const deleteProject = () => {
                     <div class="card-body">
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div class="text-base-content/60">Kontak Klien</div><div>{{ project.client_contact ?? '-' }}</div>
-                            <div class="text-base-content/60">Tipe Project</div><div>{{ projectTypeLabel(project.project_type) }}</div>
+                            <div class="text-base-content/60">Tipe Project</div><div>{{ projectTypeLabel() }}</div>
                             <div class="text-base-content/60">Tanggal Mulai</div><div>{{ formatDate(project.started_at) }}</div>
                             <div class="text-base-content/60">Tanggal Selesai</div><div>{{ formatDate(project.finished_at) }}</div>
                             <div class="text-base-content/60">Deskripsi</div><div>{{ project.description ?? '-' }}</div>

@@ -12,9 +12,11 @@ const props = defineProps({
     projects: Object,
     filters: Object,
     crm_customers: { type: Array, default: () => [] },
+    project_types: { type: Array, default: () => [] },
 });
 const { format } = useCurrency();
 const { formatDate } = useDateFormat();
+const defaultProjectTypeKey = computed(() => props.project_types.find((type) => type.is_default)?.key ?? props.project_types[0]?.key ?? '');
 
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? '');
@@ -25,7 +27,7 @@ const projectForm = useForm({
     crm_customer_id: '',
     client_name: '',
     client_contact: '',
-    project_type: 'system_website_development',
+    project_type: defaultProjectTypeKey.value,
     status: 'negosiasi',
     started_at: '',
     finished_at: '',
@@ -56,14 +58,11 @@ watch([search, status, projectType, perPage], () => {
     }, 400);
 });
 
-const projectTypeLabel = (value) => {
-    if (value === 'cctv_installation') return 'CCTV Installation';
-    if (value === 'system_website_development') return 'System/Website Development';
-    return value;
-};
+const projectTypeLabel = (value) => props.project_types.find((type) => type.key === value)?.label ?? value;
 
 const openAddProjectModal = () => {
     projectForm.clearErrors();
+    projectForm.project_type = defaultProjectTypeKey.value;
     document.getElementById('modal-add-project')?.showModal();
 };
 
@@ -121,8 +120,7 @@ const submitProject = () => {
                         </select>
                         <select v-model="projectType" class="select select-bordered select-sm">
                             <option value="">Semua Tipe</option>
-                            <option value="cctv_installation">CCTV Installation</option>
-                            <option value="system_website_development">System/Website Development</option>
+                            <option v-for="type in project_types" :key="type.key" :value="type.key">{{ type.label }}</option>
                         </select>
                         <div class="ml-auto">
                             <button type="button" class="btn btn-primary btn-sm gap-2" @click="openAddProjectModal">
@@ -227,8 +225,7 @@ const submitProject = () => {
                     <div>
                         <label class="label"><span class="label-text font-medium">Tipe Project <span class="text-error">*</span></span></label>
                         <select v-model="projectForm.project_type" class="select select-bordered w-full" :class="projectForm.errors.project_type ? 'select-error' : ''">
-                            <option value="system_website_development">System/Website Development</option>
-                            <option value="cctv_installation">CCTV Installation</option>
+                            <option v-for="type in project_types" :key="type.key" :value="type.key">{{ type.label }}</option>
                         </select>
                         <p v-if="projectForm.errors.project_type" class="text-error text-xs mt-1">{{ projectForm.errors.project_type }}</p>
                     </div>

@@ -40,6 +40,7 @@ use App\Http\Controllers\ProjectBudgetController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectPaymentController;
 use App\Http\Controllers\ProjectRoleController;
+use App\Http\Controllers\ProjectTypeController;
 use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\ReferralController;
@@ -257,6 +258,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('erp/projects/budgets/{budget}/deal', [ProjectBudgetController::class, 'markDeal'])->name('erp.projects.budgets.deal');
         Route::post('erp/projects/budgets/{budget}/convert', [ProjectBudgetController::class, 'convert'])->name('erp.projects.budgets.convert');
         Route::get('erp/projects/budgets/{budget}/pdf', [ProjectBudgetController::class, 'pdf'])->name('erp.projects.budgets.pdf');
+        Route::get('erp/projects/project-types', [ProjectTypeController::class, 'index'])->name('erp.projects.project-types.index');
+        Route::post('erp/projects/project-types', [ProjectTypeController::class, 'store'])->name('erp.projects.project-types.store');
+        Route::patch('erp/projects/project-types/{projectType}', [ProjectTypeController::class, 'update'])->name('erp.projects.project-types.update');
         Route::post('projects/{project}/materials', [ProjectController::class, 'storeMaterial'])->name('projects.materials.store');
         Route::get('projects/{project}/material-products/search', [ProjectController::class, 'materialProductSearch'])->name('projects.material-products.search');
         Route::delete('projects/{project}/materials/{material}', [ProjectController::class, 'destroyMaterial'])->name('projects.materials.destroy');
@@ -373,6 +377,7 @@ Route::middleware('auth')->group(function () {
         Route::get('erp/admin/system-logs', [ErpSystemLogController::class, 'index'])->name('erp.admin.system-logs.index');
         Route::get('erp/admin/printer-and-label', [ERPAdministrationMasterDataController::class, 'printerAndLabelSettings'])->name('erp.admin.printer-and-label');
         Route::get('erp/admin/data-import', [ERPAdministrationMasterDataController::class, 'dataImport'])->name('erp.admin.data-import');
+        Route::get('erp/admin/data-import/backup', [ERPAdministrationMasterDataController::class, 'downloadDatabaseBackup'])->name('erp.admin.data-import.backup');
         Route::get('erp/admin/data-import/products/template', [ERPAdministrationMasterDataController::class, 'downloadMasterProductImportTemplate'])->name('erp.admin.data-import.products.template');
         Route::post('erp/admin/data-import/products', [ERPAdministrationMasterDataController::class, 'importMasterProducts'])->name('erp.admin.data-import.products.store');
         Route::get('erp/admin/data-import/projects/template', [ERPAdministrationMasterDataController::class, 'downloadProjectImportTemplate'])->name('erp.admin.data-import.projects.template');

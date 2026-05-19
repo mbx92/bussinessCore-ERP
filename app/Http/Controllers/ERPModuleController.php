@@ -70,6 +70,7 @@ class ERPModuleController extends Controller
     public function projects(): Response
     {
         return $this->renderModule('Projects', [
+            ['title' => 'Tipe Project', 'description' => 'Master tipe project, label, default, dan capability seperti board task atau budget item.', 'route' => 'erp.projects.project-types.index', 'icon' => 'tag'],
             ['title' => 'Budgeting Project', 'description' => 'Siapkan budget calon project sebelum deal, lalu convert ke project.', 'route' => 'erp.projects.budgets.index', 'icon' => 'clipboard-list'],
             ['title' => 'Daftar Project', 'description' => 'Kelola proyek, status, dan termin pembayaran.', 'route' => 'projects.index', 'icon' => 'git-branch'],
             ['title' => 'Role Tim Project', 'description' => 'Master role global untuk assign tim project.', 'route' => 'erp.projects.team-roles.index', 'icon' => 'identification'],

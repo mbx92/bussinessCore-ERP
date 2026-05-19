@@ -11,7 +11,10 @@ import { useDateFormat } from '@/composables/useDateFormat';
 const props = defineProps({
     budget: Object,
     cctv_products: Array,
+    project_types: { type: Array, default: () => [] },
 });
+const projectTypeByKey = computed(() => Object.fromEntries((props.project_types ?? []).map((type) => [type.key, type])));
+const projectTypeSupportsBudgetItems = (value) => !!projectTypeByKey.value[value]?.supports_budget_items;
 
 const { formatDate } = useDateFormat();
 const { format } = useCurrency();
@@ -57,7 +60,7 @@ watch(
     { deep: true },
 );
 
-const isCctv = computed(() => budgetForm.project_type === 'cctv_installation');
+const isItemizedBudget = computed(() => projectTypeSupportsBudgetItems(budgetForm.project_type));
 const totalCctvItems = computed(() => (budgetForm.cctv_items ?? []).reduce((s, r) => s + ((Number(r.qty) || 0) * (Number(r.unit_price) || 0)), 0));
 const totalCctvCost = computed(() => (budgetForm.cctv_items ?? []).reduce((s, r) => s + ((Number(r.qty) || 0) * (Number(r.unit_cost) || 0)), 0));
 const totalCctvMargin = computed(() => totalCctvItems.value - totalCctvCost.value);
@@ -67,7 +70,7 @@ const displayedEstimated = computed(() => {
     if (props.budget.status === 'converted') {
         return Number(props.budget.estimated_value);
     }
-    if (!isCctv.value) {
+    if (!isItemizedBudget.value) {
         return Number(props.budget.estimated_value);
     }
     const t = totalCctvItems.value;
@@ -75,7 +78,7 @@ const displayedEstimated = computed(() => {
     return Number(budgetForm.estimated_value);
 });
 
-const canEditCctvItems = computed(() => props.budget.project_type === 'cctv_installation' && props.budget.status !== 'converted');
+const canEditCctvItems = computed(() => props.budget.supports_budget_items && props.budget.status !== 'converted');
 const showProductPicker = ref(false);
 const productPicker = reactive({ lineIndex: null });
 const suppressProductPickerOpen = ref(false);
@@ -195,22 +198,22 @@ const downloadPdf = () => window.open(route('erp.projects.budgets.pdf', props.bu
                 </div>
                 <div class="card-body grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                     <div><span class="text-base-content/60">Kontak</span><div>{{ budget.client_contact || '-' }}</div></div>
-                    <div><span class="text-base-content/60">Tipe</span><div>{{ budget.project_type === 'system_website_development' ? 'System/Website Development' : 'CCTV Installation' }}</div></div>
+                    <div><span class="text-base-content/60">Tipe</span><div>{{ budget.project_type_label }}</div></div>
                     <div>
                         <span class="text-base-content/60">Estimasi</span>
                         <div class="font-semibold">{{ format(displayedEstimated) }}</div>
                         <p v-if="canEditCctvItems && totalCctvItems > 0" class="text-xs text-base-content/60 mt-0.5">Total dihitung otomatis dari item CCTV di bawah.</p>
                     </div>
-                    <div v-if="budget.project_type === 'cctv_installation'"><span class="text-base-content/60">Estimasi HPP</span><div>{{ format(budget.total_cost ?? totalCctvCost) }}</div></div>
-                    <div v-if="budget.project_type === 'cctv_installation'"><span class="text-base-content/60">Estimasi Margin</span><div class="font-semibold text-success">{{ format(budget.total_margin ?? totalCctvMargin) }}</div></div>
+                    <div v-if="budget.supports_budget_items"><span class="text-base-content/60">Estimasi HPP</span><div>{{ format(budget.total_cost ?? totalCctvCost) }}</div></div>
+                    <div v-if="budget.supports_budget_items"><span class="text-base-content/60">Estimasi Margin</span><div class="font-semibold text-success">{{ format(budget.total_margin ?? totalCctvMargin) }}</div></div>
                     <div><span class="text-base-content/60">Dibuat</span><div>{{ formatDate(budget.created_at) }}</div></div>
                     <div class="md:col-span-2"><span class="text-base-content/60">Deskripsi</span><div>{{ budget.description || '-' }}</div></div>
                 </div>
             </div>
 
-            <div v-if="budget.project_type === 'cctv_installation'" class="ocn-panel">
+            <div v-if="budget.supports_budget_items" class="ocn-panel">
                 <div class="ocn-panel__head flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="ocn-panel__title">Item CCTV</h2>
+                    <h2 class="ocn-panel__title">Item Budget</h2>
                     <div v-if="canEditCctvItems" class="flex flex-wrap items-center gap-2 shrink-0">
                         <button type="button" class="btn btn-ghost btn-sm gap-1" @click="openAddProductPicker">Pilih dari master</button>
                         <button type="button" class="btn btn-outline btn-sm gap-1" @click="addCctvItem">+ Tambah item</button>
@@ -310,11 +313,11 @@ const downloadPdf = () => window.open(route('erp.projects.budgets.pdf', props.bu
                     <div><label class="label"><span class="label-text">Nama Project</span></label><input v-model="budgetForm.name" type="text" class="input input-bordered w-full" /><p v-if="budgetForm.errors.name" class="text-error text-xs mt-1">{{ budgetForm.errors.name }}</p></div>
                     <div><label class="label"><span class="label-text">Nama Klien</span></label><input v-model="budgetForm.client_name" type="text" class="input input-bordered w-full" /></div>
                     <div><label class="label"><span class="label-text">Kontak Klien</span></label><input v-model="budgetForm.client_contact" type="text" class="input input-bordered w-full" /></div>
-                    <div><label class="label"><span class="label-text">Tipe Project</span></label><select v-model="budgetForm.project_type" class="select select-bordered w-full"><option value="system_website_development">System/Website Development</option><option value="cctv_installation">CCTV Installation</option></select></div>
+                    <div><label class="label"><span class="label-text">Tipe Project</span></label><select v-model="budgetForm.project_type" class="select select-bordered w-full"><option v-for="type in project_types" :key="type.key" :value="type.key">{{ type.label }}</option></select></div>
                     <div>
-                        <CurrencyInput v-if="!isCctv" v-model="budgetForm.estimated_value" label="Estimasi Nilai Project" :required="true" :error="budgetForm.errors.estimated_value" />
+                        <CurrencyInput v-if="!isItemizedBudget" v-model="budgetForm.estimated_value" label="Estimasi Nilai Project" :required="true" :error="budgetForm.errors.estimated_value" />
                         <div v-else-if="totalCctvItems > 0">
-                            <label class="label"><span class="label-text">Total Item CCTV (otomatis dari rincian)</span></label>
+                            <label class="label"><span class="label-text">Total Item Budget (otomatis dari rincian)</span></label>
                             <div class="input input-bordered w-full flex items-center bg-base-200">{{ format(totalCctvItems) }}</div>
                         </div>
                         <div v-else>

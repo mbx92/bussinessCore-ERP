@@ -9,10 +9,12 @@ use App\Models\Project;
 use App\Models\ProjectBudget;
 use App\Models\ProjectBudgetItem;
 use App\Models\ProjectMaterial;
+use App\Models\ProjectType;
 use App\Services\PdfThemeResolver;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,6 +45,8 @@ class ProjectBudgetController extends Controller
             'client_name' => $budget->client_name,
             'client_contact' => $budget->client_contact,
             'project_type' => $budget->project_type,
+            'project_type_label' => $budget->projectTypeLabel(),
+            'supports_budget_items' => $budget->supportsBudgetItems(),
             'estimated_value' => (float) $budget->estimated_value,
             'cctv_items' => $mappedItems->isNotEmpty() ? $mappedItems : ($budget->cctv_items ?? []),
             'budget_items' => $mappedItems,
@@ -62,7 +66,10 @@ class ProjectBudgetController extends Controller
             'name' => 'required|string|max:255',
             'client_name' => 'required|string|max:255',
             'client_contact' => 'nullable|string|max:255',
-            'project_type' => 'required|in:cctv_installation,system_website_development',
+            'project_type' => [
+                'required',
+                Rule::exists('project_types', 'key')->where('is_active', true),
+            ],
             'estimated_value' => 'required|numeric|min:0',
             'description' => 'nullable|string',
         ]);
@@ -92,7 +99,10 @@ class ProjectBudgetController extends Controller
             'name' => 'required|string|max:255',
             'client_name' => 'required|string|max:255',
             'client_contact' => 'nullable|string|max:255',
-            'project_type' => 'required|in:cctv_installation,system_website_development',
+            'project_type' => [
+                'required',
+                Rule::exists('project_types', 'key')->where('is_active', true),
+            ],
             'estimated_value' => 'required|numeric|min:0',
             'description' => 'nullable|string',
             'cctv_items' => 'nullable|array',
@@ -114,7 +124,7 @@ class ProjectBudgetController extends Controller
 
     private function normalizeUpdatePayload(array $validated): array
     {
-        if (($validated['project_type'] ?? null) !== 'cctv_installation') {
+        if (! $this->projectTypeSupportsBudgetItems($validated['project_type'] ?? null)) {
             return $validated + ['cctv_items' => []];
         }
 
@@ -143,13 +153,14 @@ class ProjectBudgetController extends Controller
     public function index(): Response
     {
         $budgets = ProjectBudget::query()
-            ->with('items')
+            ->with(['items', 'projectTypeDefinition'])
             ->latest()
             ->get()
             ->map(fn (ProjectBudget $budget) => $this->mapBudget($budget));
 
         return Inertia::render('Projects/Budgets', [
             'budgets' => $budgets,
+            'project_types' => ProjectType::activeOptions(),
         ]);
     }
 
@@ -163,7 +174,7 @@ class ProjectBudgetController extends Controller
 
     public function show(ProjectBudget $budget): Response
     {
-        $budget->load('items');
+        $budget->load(['items', 'projectTypeDefinition']);
 
         return Inertia::render('Projects/BudgetShow', [
             'budget' => $this->mapBudget($budget),
@@ -172,6 +183,7 @@ class ProjectBudgetController extends Controller
                 ->whereIn('sales_channel', ['project', 'both'])
                 ->orderBy('name')
                 ->get(['id', 'sku', 'barcode', 'name', 'uom', 'selling_price', 'product_type']),
+            'project_types' => ProjectType::activeOptions(),
         ]);
     }
 
@@ -183,7 +195,7 @@ class ProjectBudgetController extends Controller
             ]);
         }
 
-        if ($request->input('project_type') !== 'cctv_installation') {
+        if (! $this->projectTypeSupportsBudgetItems($request->input('project_type'))) {
             $request->merge(['cctv_items' => []]);
         } else {
             $this->mergeFilteredCctvItems($request);
@@ -314,7 +326,7 @@ class ProjectBudgetController extends Controller
             return $rows->all();
         }
 
-        if ($budget->project_type !== 'cctv_installation' && (float) $budget->estimated_value > 0) {
+        if (! $budget->supportsBudgetItems() && (float) $budget->estimated_value > 0) {
             return [[
                 'name' => $budget->description
                     ? trim((string) $budget->description)
@@ -463,5 +475,16 @@ class ProjectBudgetController extends Controller
         }
 
         return 'planned';
+    }
+
+    private function projectTypeSupportsBudgetItems(?string $key): bool
+    {
+        if (! is_string($key) || trim($key) === '') {
+            return false;
+        }
+
+        return (bool) ProjectType::query()
+            ->where('key', $key)
+            ->value('supports_budget_items');
     }
 }

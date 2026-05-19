@@ -8,6 +8,7 @@ use App\Models\MasterProductWarehouseStock;
 use App\Models\Project;
 use App\Models\ProjectMaterial;
 use App\Models\ProjectPayment;
+use App\Models\ProjectType;
 use App\Models\TeamDistribution;
 use App\Models\TeamRole;
 use App\Models\User;
@@ -87,9 +88,10 @@ class ProjectsImport implements ToCollection, WithHeadingRow
                 continue;
             }
 
-            $projectType = strtolower(trim((string) ($data['project_type'] ?? 'system_website_development')));
-            if (! in_array($projectType, ['cctv_installation', 'system_website_development'], true)) {
-                $this->errors[] = ['row' => $line, 'message' => "Project \"{$name}\": project_type harus cctv_installation atau system_website_development."];
+            $projectType = strtolower(trim((string) ($data['project_type'] ?? ProjectType::defaultKey())));
+            $allowedProjectTypes = ProjectType::query()->pluck('key')->all();
+            if (! in_array($projectType, $allowedProjectTypes, true)) {
+                $this->errors[] = ['row' => $line, 'message' => "Project \"{$name}\": project_type tidak ditemukan di master tipe project."];
 
                 continue;
             }

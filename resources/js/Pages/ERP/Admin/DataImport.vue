@@ -12,16 +12,18 @@ const props = defineProps({
   activeTab: String,
   seeders: { type: Array, default: () => [] },
   warehouses: { type: Array, default: () => [] },
+  backupMeta: { type: Object, default: () => ({}) },
 });
 
 const page = usePage();
 
-const tab = ref(['products', 'projects', 'seeders'].includes(props.activeTab) ? props.activeTab : 'products');
+const tab = ref(['products', 'projects', 'seeders', 'backup'].includes(props.activeTab) ? props.activeTab : 'products');
+const pageTitle = computed(() => (tab.value === 'backup' ? 'Administration - Backup Database' : 'Administration - Impor & Seeder Data'));
 
 watch(
   () => props.activeTab,
   (v) => {
-    if (v && ['products', 'projects', 'seeders'].includes(v)) {
+    if (v && ['products', 'projects', 'seeders', 'backup'].includes(v)) {
       tab.value = v;
     }
   },
@@ -128,6 +130,7 @@ function submitClearWarehouseProductsFromModal() {
 
 const productTemplateUrl = route('erp.admin.data-import.products.template');
 const projectTemplateUrl = route('erp.admin.data-import.projects.template');
+const backupUrl = route('erp.admin.data-import.backup');
 
 const seederState = reactive({});
 props.seeders.forEach((s) => {
@@ -174,7 +177,7 @@ async function runAllSeeders() {
 </script>
 
 <template>
-  <Head title="Administration - Impor & Seeder Data" />
+  <Head :title="pageTitle" />
   <AppLayout>
     <div class="space-y-5">
       <div class="ocn-panel">
@@ -223,6 +226,16 @@ async function runAllSeeders() {
         >
           <ServerStackIcon class="h-4 w-4" />
           Database Seeder
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab gap-1.5"
+          :class="tab === 'backup' ? 'tab-active' : ''"
+          @click="selectTab('backup')"
+        >
+          <ArrowPathIcon class="h-4 w-4" />
+          Backup Database
         </button>
       </div>
 
@@ -321,6 +334,52 @@ async function runAllSeeders() {
         </div>
       </div>
 
+      <div v-show="tab === 'backup'" class="ocn-panel">
+        <div class="ocn-panel__head">
+          <h2 class="ocn-panel__title">Backup Database</h2>
+          <p class="ocn-panel__desc">
+            Unduh dump PostgreSQL asli dari server melalui <code>pg_dump</code> langsung dari frontend.
+          </p>
+        </div>
+        <div class="card-body space-y-4">
+          <div class="rounded-xl border border-base-300 bg-base-200/40 p-4">
+            <div class="grid gap-2 text-sm md:grid-cols-2">
+              <div><span class="text-base-content/60">Koneksi</span><div class="font-medium">{{ backupMeta.connection || '-' }}</div></div>
+              <div><span class="text-base-content/60">Driver</span><div class="font-medium">{{ backupMeta.driver || '-' }}</div></div>
+              <div><span class="text-base-content/60">Database</span><div class="font-medium break-all">{{ backupMeta.database || '-' }}</div></div>
+              <div><span class="text-base-content/60">Host</span><div class="font-medium break-all">{{ backupMeta.host || '-' }}</div></div>
+              <div><span class="text-base-content/60">Port</span><div class="font-medium">{{ backupMeta.port || '-' }}</div></div>
+              <div><span class="text-base-content/60">Schema</span><div class="font-medium">{{ backupMeta.schema || '-' }}</div></div>
+              <div><span class="text-base-content/60">Binary</span><div class="font-medium break-all">{{ backupMeta.binary || '-' }}</div></div>
+              <div class="md:col-span-2"><span class="text-base-content/60">Format</span><div class="font-medium">{{ backupMeta.format || 'PostgreSQL pg_dump (.sql)' }}</div></div>
+            </div>
+          </div>
+
+          <div
+            class="rounded-xl border p-3 text-sm"
+            :class="backupMeta.available ? 'border-success/30 bg-success/10 text-success-content' : 'border-warning/30 bg-warning/10 text-warning-content'"
+          >
+            {{ backupMeta.message || 'Status backup server tidak tersedia.' }}
+          </div>
+
+          <ul class="list-disc space-y-1 pl-5 text-sm text-base-content/80">
+            <li>File backup diunduh dalam format <strong>.sql</strong> hasil <strong>pg_dump</strong>.</li>
+            <li>Dump ini cocok untuk restore PostgreSQL dan lebih dekat dengan backup production sebenarnya.</li>
+            <li>Fitur ini membutuhkan koneksi database PostgreSQL dan binary <code>pg_dump</code> tersedia di server aplikasi.</li>
+          </ul>
+
+          <div class="flex flex-wrap gap-2">
+            <a
+              :href="backupMeta.available ? backupUrl : undefined"
+              class="btn btn-primary btn-sm gap-2"
+              :class="{ 'btn-disabled pointer-events-none opacity-60': !backupMeta.available }"
+            >
+              Unduh Backup Database
+            </a>
+          </div>
+        </div>
+      </div>
+
       <!-- Tab: project -->
       <div v-show="tab === 'projects'" class="ocn-panel">
         <div class="ocn-panel__head">
@@ -347,7 +406,7 @@ async function runAllSeeders() {
 
           <ul class="list-disc space-y-1 pl-5 text-sm text-base-content/80">
             <li><strong>import_key</strong>: ID unik di sistem lama (opsional). Jika diisi dan sudah ada di database, project <strong>diperbarui</strong> dan jadwal termin diganti — kecuali ada termin yang sudah ditandai lunas (<code class="rounded bg-base-200 px-1 text-xs">paid_at</code>).</li>
-            <li><strong>project_type</strong>: <code class="rounded bg-base-200 px-1">system_website_development</code> atau <code class="rounded bg-base-200 px-1">cctv_installation</code>.</li>
+            <li><strong>project_type</strong>: isi dengan <code class="rounded bg-base-200 px-1">key</code> yang terdaftar di master tipe project.</li>
             <li><strong>status</strong>: negosiasi, berjalan, selesai, dibatalkan.</li>
             <li><strong>invoice_number</strong>: opsional; harus unik jika diisi.</li>
             <li><strong>started_at</strong> / <strong>finished_at</strong>: tanggal (YYYY-MM-DD) atau tanggal Excel.</li>

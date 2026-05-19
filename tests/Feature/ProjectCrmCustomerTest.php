@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\ERP\CRM\Models\CrmCustomer;
 use App\Models\Project;
+use App\Models\ProjectType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -149,6 +150,46 @@ class ProjectCrmCustomerTest extends TestCase
             'crm_customer_id' => $newCustomer->id,
             'client_name' => 'Ibu Ani',
             'client_contact' => 'ani@example.test',
+        ]);
+    }
+
+    public function test_project_create_accepts_active_type_from_project_type_master(): void
+    {
+        $this->disableErpMiddleware();
+
+        ProjectType::query()->create([
+            'key' => 'network_installation',
+            'label' => 'Network Installation',
+            'supports_budget_items' => true,
+            'supports_project_board' => false,
+            'is_active' => true,
+            'is_default' => false,
+            'sort_order' => 30,
+        ]);
+
+        $user = User::factory()->create();
+        $customer = CrmCustomer::query()->create([
+            'code' => 'CUST-9011',
+            'name' => 'Network Customer',
+            'company' => 'PT Network Rapi',
+            'source' => 'manual',
+            'is_active' => true,
+        ]);
+
+        $this
+            ->actingAs($user)
+            ->post(route('projects.store'), [
+                'name' => 'Instalasi Jaringan Cabang',
+                'crm_customer_id' => $customer->id,
+                'project_type' => 'network_installation',
+                'status' => 'negosiasi',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('projects.index'));
+
+        $this->assertDatabaseHas('projects', [
+            'name' => 'Instalasi Jaringan Cabang',
+            'project_type' => 'network_installation',
         ]);
     }
 

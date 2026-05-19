@@ -6,14 +6,16 @@ import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     crm_customers: { type: Array, default: () => [] },
+    project_types: { type: Array, default: () => [] },
 });
+const defaultProjectTypeKey = computed(() => props.project_types.find((type) => type.is_default)?.key ?? props.project_types[0]?.key ?? '');
 
 const form = useForm({
     name: '',
     crm_customer_id: '',
     client_name: '',
     client_contact: '',
-    project_type: 'system_website_development',
+    project_type: defaultProjectTypeKey.value,
     status: 'negosiasi',
     started_at: '',
     finished_at: '',
@@ -94,8 +96,7 @@ const submit = () => form.post(route('projects.store'));
                             <div>
                                 <label class="label"><span class="label-text font-medium">Tipe Project <span class="text-error">*</span></span></label>
                                 <select v-model="form.project_type" class="select select-bordered w-full" :class="form.errors.project_type ? 'select-error' : ''">
-                                    <option value="system_website_development">System/Website Development</option>
-                                    <option value="cctv_installation">CCTV Installation</option>
+                                    <option v-for="type in project_types" :key="type.key" :value="type.key">{{ type.label }}</option>
                                 </select>
                                 <p v-if="form.errors.project_type" class="text-error text-xs mt-1">{{ form.errors.project_type }}</p>
                             </div>

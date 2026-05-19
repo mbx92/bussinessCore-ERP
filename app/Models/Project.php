@@ -54,6 +54,11 @@ class Project extends Model
         return $this->belongsTo(CrmCustomer::class, 'crm_customer_id');
     }
 
+    public function projectTypeDefinition()
+    {
+        return $this->belongsTo(ProjectType::class, 'project_type', 'key');
+    }
+
     public function cashIns()
     {
         return $this->hasMany(CashIn::class);
@@ -137,6 +142,27 @@ class Project extends Model
     public function resolveInvoiceAmount(): float
     {
         return $this->resolveListTotalValue();
+    }
+
+    public function projectTypeLabel(): string
+    {
+        $this->loadMissing('projectTypeDefinition');
+
+        return $this->projectTypeDefinition?->label ?: (string) $this->project_type;
+    }
+
+    public function supportsBudgetItems(): bool
+    {
+        $this->loadMissing('projectTypeDefinition');
+
+        return (bool) $this->projectTypeDefinition?->supports_budget_items;
+    }
+
+    public function supportsProjectBoard(): bool
+    {
+        $this->loadMissing('projectTypeDefinition');
+
+        return (bool) $this->projectTypeDefinition?->supports_project_board;
     }
 
     /**

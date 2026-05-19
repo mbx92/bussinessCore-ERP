@@ -159,7 +159,7 @@ const downloadReceipt = (payment) => window.open(route('erp.sales.project-invoic
             <div class="grid grid-cols-2 gap-2 text-sm">
               <div class="text-base-content/60">Client</div><div>{{ invoice.client }}</div>
               <div class="text-base-content/60">Kontak</div><div>{{ invoice.client_contact || '-' }}</div>
-              <div class="text-base-content/60">Tipe</div><div>{{ invoice.project_type }}</div>
+              <div class="text-base-content/60">Tipe</div><div>{{ invoice.project_type_label || invoice.project_type }}</div>
               <div class="text-base-content/60">Mulai</div><div>{{ formatDate(invoice.started_at) }}</div>
               <div class="text-base-content/60">Selesai</div><div class="whitespace-nowrap">{{ formatDate(invoice.finished_at) }}</div>
               <div class="text-base-content/60">Deskripsi</div><div>{{ invoice.description || '-' }}</div>

@@ -32,4 +32,23 @@ class ProjectBudget extends Model
     {
         return $this->hasMany(ProjectBudgetItem::class)->orderBy('sort_order')->orderBy('id');
     }
+
+    public function projectTypeDefinition()
+    {
+        return $this->belongsTo(ProjectType::class, 'project_type', 'key');
+    }
+
+    public function projectTypeLabel(): string
+    {
+        $this->loadMissing('projectTypeDefinition');
+
+        return $this->projectTypeDefinition?->label ?: (string) $this->project_type;
+    }
+
+    public function supportsBudgetItems(): bool
+    {
+        $this->loadMissing('projectTypeDefinition');
+
+        return (bool) $this->projectTypeDefinition?->supports_budget_items;
+    }
 }

@@ -992,7 +992,7 @@ class ERPSalesController extends Controller
     {
         abort_unless($project->status === 'selesai', 404);
 
-        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod', 'cashIns.cashAccount', 'materials.product', 'convertedBudget.items']);
+        $project->load(['payments', 'cashIns.creator', 'cashIns.paymentMethod', 'cashIns.cashAccount', 'materials.product', 'convertedBudget.items', 'projectTypeDefinition']);
         $project->loadSum('cashIns as paid_amount', 'amount');
         $project->invoice_number = $this->ensureProjectInvoiceNumber($project);
 
@@ -1000,6 +1000,7 @@ class ERPSalesController extends Controller
             'invoice' => $this->mapProjectInvoice($project) + [
                 'client_contact' => $project->client_contact,
                 'project_type' => $project->project_type,
+                'project_type_label' => $project->projectTypeLabel(),
                 'started_at' => $project->started_at?->format('Y-m-d'),
                 'finished_at' => $project->finished_at?->format('Y-m-d'),
                 'description' => $project->description,

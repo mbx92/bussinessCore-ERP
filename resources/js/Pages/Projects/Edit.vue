@@ -15,6 +15,7 @@ const props = defineProps({
     payments: { type: Array, default: () => [] },
     can_edit_payments: { type: Boolean, default: false },
     crm_customers: { type: Array, default: () => [] },
+    project_types: { type: Array, default: () => [] },
 });
 
 const { format } = useCurrency();
@@ -147,8 +148,7 @@ const submit = () => {
                         <div>
                             <label class="label"><span class="label-text font-medium">Tipe Project</span></label>
                             <select v-model="form.project_type" class="select select-bordered w-full" :class="form.errors.project_type ? 'select-error' : ''">
-                                <option value="system_website_development">System/Website Development</option>
-                                <option value="cctv_installation">CCTV Installation</option>
+                                <option v-for="type in project_types" :key="type.key" :value="type.key">{{ type.label }}</option>
                             </select>
                             <p v-if="form.errors.project_type" class="text-error text-xs mt-1">{{ form.errors.project_type }}</p>
                         </div>

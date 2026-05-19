@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     git \
     curl \
+    postgresql-client \
     libpq-dev \
     libzip-dev \
     zip unzip \

@@ -23,6 +23,7 @@ use App\Models\ProductStockMovement;
 use App\Models\ProjectMaterial;
 use App\Services\LanEscPosPrinter;
 use App\Services\LanTsplPrinter;
+use App\Services\DatabaseBackupService;
 use App\Services\ServerMetricsService;
 use App\Services\ThermalPosReceiptData;
 use App\Services\ThermalPosReceiptRenderer;
@@ -42,6 +43,10 @@ use RuntimeException;
 
 class ERPAdministrationMasterDataController extends Controller
 {
+    public function __construct(
+        private readonly DatabaseBackupService $databaseBackupService,
+    ) {}
+
     public function erpSettings(): Response
     {
         $setting = ErpSetting::query()->first();
@@ -838,7 +843,7 @@ class ERPAdministrationMasterDataController extends Controller
     public function dataImport(Request $request): Response
     {
         $tab = $request->string('tab')->toString();
-        if (! in_array($tab, ['products', 'projects', 'seeders'], true)) {
+        if (! in_array($tab, ['products', 'projects', 'seeders', 'backup'], true)) {
             $tab = 'products';
         }
 
@@ -848,7 +853,13 @@ class ERPAdministrationMasterDataController extends Controller
             'warehouses' => Warehouse::query()
                 ->orderBy('name')
                 ->get(['id', 'code', 'name']),
+            'backupMeta' => $this->databaseBackupService->backupMeta(),
         ]);
+    }
+
+    public function downloadDatabaseBackup()
+    {
+        return $this->databaseBackupService->downloadPostgresDump();
     }
 
     public function runSeeder(Request $request): JsonResponse

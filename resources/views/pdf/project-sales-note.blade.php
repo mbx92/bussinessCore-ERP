@@ -92,7 +92,7 @@
                 <h2 class="section-title">Project Information</h2>
                 <table class="info-table">
                     <tr><td>Project</td><td>: {{ $project->name }}</td></tr>
-                    <tr><td>Type</td><td>: {{ $project->project_type ?: '-' }}</td></tr>
+                    <tr><td>Type</td><td>: {{ $project->projectTypeLabel() ?: '-' }}</td></tr>
                     <tr><td>Finished</td><td>: {{ $project->finished_at?->format('F d, Y') ?: '-' }}</td></tr>
                 </table>
             </td>

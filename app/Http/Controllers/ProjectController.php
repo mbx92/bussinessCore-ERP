@@ -13,6 +13,7 @@ use App\Models\ProjectBudget;
 use App\Models\ProjectMaterial;
 use App\Models\ProjectPayment;
 use App\Models\ProjectTask;
+use App\Models\ProjectType;
 use App\Models\TeamDistribution;
 use App\Models\TeamRole;
 use App\Models\User;
@@ -29,7 +30,7 @@ class ProjectController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Project::with(['payments', 'materials', 'convertedBudget.items'])
+        $query = Project::with(['payments', 'materials', 'convertedBudget.items', 'projectTypeDefinition'])
             ->withSum('cashIns as paid_amount', 'amount')
             ->when($request->search, fn ($q) => $q->where('name', 'ilike', "%{$request->search}%")
                 ->orWhere('client_name', 'ilike', "%{$request->search}%"))
@@ -42,6 +43,9 @@ class ProjectController extends Controller
                 'name' => $p->name,
                 'client_name' => $p->client_name,
                 'project_type' => $p->project_type,
+                'project_type_label' => $p->projectTypeLabel(),
+                'supports_budget_items' => $p->supportsBudgetItems(),
+                'supports_project_board' => $p->supportsProjectBoard(),
                 'status' => $p->status,
                 'total_value' => $p->resolveListTotalValue(),
                 'paid_amount' => (float) ($p->paid_amount ?? 0),
@@ -52,6 +56,7 @@ class ProjectController extends Controller
             'projects' => $projects,
             'filters' => $this->filtersWithPerPage($request, ['search', 'status', 'project_type']),
             'crm_customers' => $this->crmCustomerOptions(),
+            'project_types' => $this->projectTypeOptions(),
         ]);
     }
 
@@ -59,6 +64,7 @@ class ProjectController extends Controller
     {
         return Inertia::render('Projects/Create', [
             'crm_customers' => $this->crmCustomerOptions(),
+            'project_types' => $this->projectTypeOptions(),
         ]);
     }
 
@@ -67,7 +73,10 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'crm_customer_id' => 'required|exists:crm_customers,id',
-            'project_type' => 'nullable|in:cctv_installation,system_website_development',
+            'project_type' => [
+                'nullable',
+                Rule::exists('project_types', 'key')->where('is_active', true),
+            ],
             'total_value' => 'nullable|numeric|min:0',
             'status' => 'required|in:negosiasi,berjalan,selesai,dibatalkan',
             'started_at' => 'nullable|date',
@@ -98,7 +107,7 @@ class ProjectController extends Controller
         } else {
             $validated['payments'] = [];
         }
-        $validated['project_type'] = $validated['project_type'] ?? 'system_website_development';
+        $validated['project_type'] = $validated['project_type'] ?? ProjectType::defaultKey();
         $validated = array_merge($validated, $this->projectClientSnapshot((int) $validated['crm_customer_id']));
 
         DB::transaction(function () use ($validated) {
@@ -113,7 +122,7 @@ class ProjectController extends Controller
 
     public function show(Project $project)
     {
-        $project->load(['payments', 'cashIns.creator', 'cashOuts.creator', 'teamDistributions.user', 'referrals', 'tasks.assignee']);
+        $project->load(['payments', 'cashIns.creator', 'cashOuts.creator', 'teamDistributions.user', 'referrals', 'tasks.assignee', 'projectTypeDefinition']);
         $project->load(['materials.product', 'materials.warehouse']);
         if (! TeamRole::query()->exists()) {
             foreach (['Lead', 'Developer', 'Designer', 'QA'] as $name) {
@@ -149,6 +158,9 @@ class ProjectController extends Controller
                 'client_contact' => $project->client_contact,
                 'crm_customer_id' => $project->crm_customer_id,
                 'project_type' => $project->project_type,
+                'project_type_label' => $project->projectTypeLabel(),
+                'supports_budget_items' => $project->supportsBudgetItems(),
+                'supports_project_board' => $project->supportsProjectBoard(),
                 'total_value' => (float) $project->total_value,
                 'status' => $project->status,
                 'created_at' => $project->created_at?->format('Y-m-d'),
@@ -156,7 +168,6 @@ class ProjectController extends Controller
                 'finished_at' => $project->finished_at?->format('Y-m-d'),
                 'invoiced_at' => $project->invoiced_at?->format('Y-m-d'),
                 'description' => $project->description,
-                'project_type' => $project->project_type,
                 'payments' => $project->payments->map(fn ($p) => [
                     'id' => $p->id,
                     'term_number' => $p->term_number,
@@ -331,9 +342,9 @@ class ProjectController extends Controller
 
     public function storeTask(Request $request, Project $project)
     {
-        if ($project->project_type !== 'system_website_development') {
+        if (! $project->supportsProjectBoard()) {
             throw ValidationException::withMessages([
-                'project' => 'Kanban task hanya tersedia untuk project System/Website Development.',
+                'project' => 'Kanban task hanya tersedia untuk tipe project yang mengaktifkan board task.',
             ]);
         }
 
@@ -395,6 +406,7 @@ class ProjectController extends Controller
     public function edit(Project $project)
     {
         $project->load('payments');
+        $project->loadMissing('projectTypeDefinition');
 
         $canEditPayments = ! $project->payments()->whereNotNull('paid_at')->exists();
 
@@ -406,6 +418,9 @@ class ProjectController extends Controller
                 'client_contact' => $project->client_contact,
                 'crm_customer_id' => $project->crm_customer_id,
                 'project_type' => $project->project_type,
+                'project_type_label' => $project->projectTypeLabel(),
+                'supports_budget_items' => $project->supportsBudgetItems(),
+                'supports_project_board' => $project->supportsProjectBoard(),
                 'total_value' => (float) $project->total_value,
                 'status' => $project->status,
                 'started_at' => $project->started_at?->format('Y-m-d') ?? '',
@@ -424,6 +439,7 @@ class ProjectController extends Controller
             ]),
             'can_edit_payments' => $canEditPayments,
             'crm_customers' => $this->crmCustomerOptions(),
+            'project_types' => $this->projectTypeOptions(),
         ]);
     }
 
@@ -440,7 +456,10 @@ class ProjectController extends Controller
         $rules = [
             'name' => 'required|string|max:255',
             'crm_customer_id' => 'required|exists:crm_customers,id',
-            'project_type' => 'nullable|in:cctv_installation,system_website_development',
+            'project_type' => [
+                'nullable',
+                Rule::exists('project_types', 'key')->where('is_active', true),
+            ],
             'total_value' => 'required|numeric|min:0',
             'status' => 'required|in:negosiasi,berjalan,selesai,dibatalkan',
             'started_at' => 'nullable|date',
@@ -457,7 +476,7 @@ class ProjectController extends Controller
 
         $validated = $request->validate($rules);
         $validated['total_value'] = (float) $validated['total_value'];
-        $validated['project_type'] = $validated['project_type'] ?? $project->project_type ?? 'system_website_development';
+        $validated['project_type'] = $validated['project_type'] ?? $project->project_type ?? ProjectType::defaultKey();
         $validated = array_merge($validated, $this->projectClientSnapshot((int) $validated['crm_customer_id']));
 
         $legalRaw = $request->input('legal_vault_path');
@@ -895,5 +914,10 @@ class ProjectController extends Controller
         $target = $root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $relative);
 
         return File::isDirectory($target);
+    }
+
+    private function projectTypeOptions(): array
+    {
+        return ProjectType::activeOptions()->all();
     }
 }
