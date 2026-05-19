@@ -24,6 +24,7 @@ class UserSeeder extends Seeder
             'erp.inventory.manage',
             'erp.hr.manage',
             'erp.project.manage',
+            'manage-rnd',
             'erp.reporting.view',
             'erp.period.close',
         ];
@@ -42,6 +43,7 @@ class UserSeeder extends Seeder
             'erp.reporting.view',
             'erp.project.manage',
             'erp.sales.manage',
+            'manage-rnd',
         ]);
 
         $adminRole = Role::findByName('admin');

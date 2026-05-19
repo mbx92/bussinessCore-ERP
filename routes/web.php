@@ -44,6 +44,12 @@ use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\ReferralController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RndBudgetItemController;
+use App\Http\Controllers\RndProductOutputController;
+use App\Http\Controllers\RndProjectController;
+use App\Http\Controllers\RndPurchaseController;
+use App\Http\Controllers\RndReportController;
+use App\Http\Controllers\RndResearchNoteController;
 use App\Http\Controllers\TeamDistributionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserRolePermissionController;
@@ -68,6 +74,36 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('erp/chatbot/ask', [ErpChatbotController::class, 'ask'])->name('erp.chatbot.ask');
     Route::post('erp/context/company', [ErpCompanyContextController::class, 'update'])->name('erp.context.company');
+
+    Route::prefix('rnd')->name('rnd.')->middleware('can:manage-rnd')->group(function () {
+        Route::get('/', [RndProjectController::class, 'index'])->name('dashboard');
+        Route::get('projects', [RndProjectController::class, 'index'])->name('projects.index');
+        Route::get('projects/create', [RndProjectController::class, 'create'])->name('projects.create');
+        Route::post('projects', [RndProjectController::class, 'store'])->name('projects.store');
+        Route::get('projects/{rndProject}', [RndProjectController::class, 'show'])->name('projects.show');
+        Route::get('projects/{rndProject}/edit', [RndProjectController::class, 'edit'])->name('projects.edit');
+        Route::put('projects/{rndProject}', [RndProjectController::class, 'update'])->name('projects.update');
+        Route::delete('projects/{rndProject}', [RndProjectController::class, 'destroy'])->name('projects.destroy');
+
+        Route::post('projects/{rndProject}/notes', [RndResearchNoteController::class, 'store'])->name('projects.notes.store');
+        Route::patch('projects/{rndProject}/notes/{rndResearchNote}', [RndResearchNoteController::class, 'update'])->name('projects.notes.update');
+        Route::delete('projects/{rndProject}/notes/{rndResearchNote}', [RndResearchNoteController::class, 'destroy'])->name('projects.notes.destroy');
+
+        Route::post('projects/{rndProject}/budgets', [RndBudgetItemController::class, 'store'])->name('projects.budgets.store');
+        Route::patch('projects/{rndProject}/budgets/{rndBudgetItem}', [RndBudgetItemController::class, 'update'])->name('projects.budgets.update');
+        Route::delete('projects/{rndProject}/budgets/{rndBudgetItem}', [RndBudgetItemController::class, 'destroy'])->name('projects.budgets.destroy');
+
+        Route::post('projects/{rndProject}/purchases', [RndPurchaseController::class, 'store'])->name('projects.purchases.store');
+        Route::patch('projects/{rndProject}/purchases/{rndPurchase}', [RndPurchaseController::class, 'update'])->name('projects.purchases.update');
+        Route::delete('projects/{rndProject}/purchases/{rndPurchase}', [RndPurchaseController::class, 'destroy'])->name('projects.purchases.destroy');
+
+        Route::post('projects/{rndProject}/outputs', [RndProductOutputController::class, 'store'])->name('projects.outputs.store');
+        Route::patch('projects/{rndProject}/outputs/{rndProductOutput}', [RndProductOutputController::class, 'update'])->name('projects.outputs.update');
+        Route::delete('projects/{rndProject}/outputs/{rndProductOutput}', [RndProductOutputController::class, 'destroy'])->name('projects.outputs.destroy');
+
+        Route::get('projects/{rndProject}/report', [RndReportController::class, 'show'])->name('projects.report');
+        Route::get('projects/{rndProject}/report/pdf', [RndReportController::class, 'pdf'])->name('projects.report.pdf');
+    });
 
     Route::middleware('role_or_permission:admin|manajer|finance|menu.erp.accounting|erp.accounting.post-journal|erp.reporting.view')->group(function () {
         Route::get('erp/accounting', [ERPModuleController::class, 'accounting'])->name('erp.accounting');

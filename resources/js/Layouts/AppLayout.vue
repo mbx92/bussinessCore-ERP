@@ -6,6 +6,7 @@ import {
     UsersIcon, Bars3Icon, XMarkIcon, ArrowRightOnRectangleIcon, BuildingOffice2Icon, BellAlertIcon,
     ShoppingCartIcon, ArchiveBoxIcon, UserCircleIcon, BanknotesIcon, CircleStackIcon, ChatBubbleLeftRightIcon, PaperAirplaneIcon,
     TrashIcon,
+    BeakerIcon,
     WalletIcon,
     NewspaperIcon,
     PhotoIcon,
@@ -138,7 +139,7 @@ const sidebarModules = computed(() => {
     const legacyAdmin = role === 'admin';
 
     const showErp = usePermissionMenus.value
-        ? permissions.value.some((p) => p.startsWith('menu.erp.'))
+        ? permissions.value.some((p) => p.startsWith('menu.erp.')) || permissions.value.includes('manage-rnd')
         : legacyErp;
     const showCms = usePermissionMenus.value
         ? permissions.value.some((p) => p.startsWith('menu.cms.'))
@@ -163,6 +164,7 @@ const sidebarModules = computed(() => {
             { name: 'Purchasing', href: route('erp.purchasing'), icon: ShoppingCartIcon, permission: 'menu.erp.purchasing' },
             { name: 'Inventory', href: route('erp.inventory'), icon: ArchiveBoxIcon, permission: 'menu.erp.inventory' },
             { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon, permission: 'menu.erp.projects' },
+            { name: 'R&D', href: route('rnd.dashboard'), icon: BeakerIcon, permissionAny: ['menu.erp.rnd', 'manage-rnd'] },
             { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon, permission: 'menu.erp.hr' },
             { name: 'CRM', href: route('erp.crm'), icon: ShareIcon, permission: 'menu.erp.crm' },
             { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon, permission: 'menu.erp.calendar' },
@@ -227,6 +229,7 @@ const topbarContext = computed(() => {
     if (pathname.includes('/projects')) return { label: 'Projects Workspace', subtitle: 'Pantau proyek, termin pembayaran, dan profitabilitas.' };
     if (pathname.includes('/erp/hr/legal')) return { label: 'Legal Workspace', subtitle: 'File manager dokumen legal di server.' };
     if (pathname.includes('/erp/calendar')) return { label: 'Calendar Workspace', subtitle: 'Jadwal event project, PO, pipeline, dan follow-up.' };
+    if (pathname.startsWith('/rnd')) return { label: 'R&D Workspace', subtitle: 'Kelola riset, budget, pembelian, output produk, dan laporan proyek.' };
     if (pathname.includes('/erp/crm')) return { label: 'CRM Workspace', subtitle: 'Kelola prospek, customer, dan aktivitas follow-up.' };
     if (pathname.startsWith('/personal')) return { label: 'Personal Workspace', subtitle: 'Pencatatan keuangan pribadi dan keluarga.' };
     if (pathname.startsWith('/users/roles-permissions')) return { label: 'Roles & permission', subtitle: 'Atur hak akses menu per role.' };

@@ -51,6 +51,7 @@ class InitialAdminSeeder extends Seeder
             'erp.inventory.manage',
             'erp.hr.manage',
             'erp.project.manage',
+            'manage-rnd',
             'erp.reporting.view',
             'erp.period.close',
         ];

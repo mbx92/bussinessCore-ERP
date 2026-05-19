@@ -12,6 +12,7 @@ return [
     ['name' => 'menu.erp.purchasing', 'label' => 'Purchasing', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.inventory', 'label' => 'Inventory', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.projects', 'label' => 'Projects', 'group' => 'Modul ERP'],
+    ['name' => 'menu.erp.rnd', 'label' => 'R&D', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.hr', 'label' => 'HR', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.crm', 'label' => 'CRM', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.calendar', 'label' => 'Calendar', 'group' => 'Modul ERP'],
