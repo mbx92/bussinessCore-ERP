@@ -27,12 +27,22 @@ RUN npm run build
 # --- PHP + Nginx + Supervisor (PHP 8.4 — selaras dengan runtime produksi)
 FROM php:8.4-fpm-bookworm
 
+ARG PG_CLIENT_MAJOR=17
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    wget \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo \"$VERSION_CODENAME\")-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     git \
     curl \
-    postgresql-client \
+    postgresql-client-${PG_CLIENT_MAJOR} \
     libpq-dev \
     libzip-dev \
     zip unzip \

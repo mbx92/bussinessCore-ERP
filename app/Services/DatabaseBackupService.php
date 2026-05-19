@@ -112,7 +112,7 @@ class DatabaseBackupService
         }
 
         $config = config('database.connections.'.$connection->getName(), []);
-        $binary = $this->resolvePgDumpBinary();
+        $binary = $this->resolvePgDumpBinary($this->postgresServerMajorVersion($connectionName));
 
         return [
             'connection' => $connection->getName(),
@@ -182,7 +182,7 @@ class DatabaseBackupService
             : (new ExecutableFinder())->find($binary) !== null;
     }
 
-    private function resolvePgDumpBinary(): string
+    private function resolvePgDumpBinary(?int $serverMajor = null): string
     {
         $configured = trim((string) config('database.pg_dump_binary', env('PG_DUMP_BINARY', '')));
         if ($configured !== '') {
@@ -200,6 +200,12 @@ class DatabaseBackupService
             }
         }
 
+        foreach ($this->preferredPgDumpCandidates($serverMajor) as $candidate) {
+            if (file_exists($candidate)) {
+                return $candidate;
+            }
+        }
+
         $finder = new ExecutableFinder();
         $fromPath = $finder->find('pg_dump');
         if ($fromPath !== null) {
@@ -212,7 +218,10 @@ class DatabaseBackupService
             }
         }
 
-        throw new RuntimeException('Binary pg_dump tidak ditemukan di server aplikasi. Set env PG_DUMP_BINARY jika path-nya custom.');
+        throw new RuntimeException(
+            'Binary pg_dump tidak ditemukan di server aplikasi.'
+            .($serverMajor ? " Install pg_dump versi {$serverMajor} atau set env PG_DUMP_BINARY." : ' Set env PG_DUMP_BINARY jika path-nya custom.')
+        );
     }
 
     /**
@@ -223,6 +232,9 @@ class DatabaseBackupService
         $home = (string) env('HOME', '');
 
         return array_values(array_filter([
+            '/usr/lib/postgresql/17/bin/pg_dump',
+            '/usr/lib/postgresql/16/bin/pg_dump',
+            '/usr/lib/postgresql/15/bin/pg_dump',
             '/usr/local/bin/pg_dump',
             '/usr/local/opt/postgresql/bin/pg_dump',
             '/usr/local/opt/postgresql@17/bin/pg_dump',
@@ -236,6 +248,39 @@ class DatabaseBackupService
             '/Applications/Postgres.app/Contents/Versions/latest/bin/pg_dump',
             $home !== '' ? $home.'/.local/bin/pg_dump' : null,
         ]));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function preferredPgDumpCandidates(?int $serverMajor): array
+    {
+        if (! $serverMajor) {
+            return [];
+        }
+
+        return array_values(array_filter([
+            "/usr/lib/postgresql/{$serverMajor}/bin/pg_dump",
+            "/usr/local/opt/postgresql@{$serverMajor}/bin/pg_dump",
+            "/opt/homebrew/opt/postgresql@{$serverMajor}/bin/pg_dump",
+        ]));
+    }
+
+    private function postgresServerMajorVersion(?string $connectionName = null): ?int
+    {
+        try {
+            $versionNum = (string) DB::connection($connectionName)
+                ->selectOne("select current_setting('server_version_num') as version_num")
+                ?->version_num;
+
+            if ($versionNum === '' || ! ctype_digit($versionNum)) {
+                return null;
+            }
+
+            return (int) floor(((int) $versionNum) / 10000);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function temporaryBackupPath(string $filename): string
@@ -262,6 +307,11 @@ class DatabaseBackupService
         if ($detail === '') {
             return 'Periksa koneksi database, credential, permission container aplikasi, dan ketersediaan binary pg_dump.'
                 .($exitCode !== null ? ' Exit code: '.$exitCode.'.' : '');
+        }
+
+        if (str_contains(strtolower($detail), 'server version mismatch')) {
+            return 'Detail: '.$detail.'. Install pg_dump dengan major version yang sama seperti server PostgreSQL, atau arahkan env PG_DUMP_BINARY ke binary yang cocok'
+                .($exitCode !== null ? ' (exit code '.$exitCode.')' : '');
         }
 
         $detail = Str::limit($detail, 240);
