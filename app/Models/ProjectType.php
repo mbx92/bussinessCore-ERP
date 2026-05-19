@@ -11,6 +11,7 @@ class ProjectType extends Model
     protected $fillable = [
         'key',
         'label',
+        'badge_color',
         'description',
         'supports_budget_items',
         'supports_project_board',
@@ -66,6 +67,7 @@ class ProjectType extends Model
                 'id' => $type->id,
                 'key' => $type->key,
                 'label' => $type->label,
+                'badge_color' => $type->badge_color,
                 'description' => $type->description,
                 'supports_budget_items' => $type->supports_budget_items,
                 'supports_project_board' => $type->supports_project_board,

@@ -2,15 +2,27 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
     types: { type: Array, default: () => [] },
 });
 
+const badgeColorOptions = [
+    { value: 'ghost', label: 'Netral' },
+    { value: 'primary', label: 'Primary' },
+    { value: 'secondary', label: 'Secondary' },
+    { value: 'accent', label: 'Accent' },
+    { value: 'info', label: 'Info' },
+    { value: 'success', label: 'Success' },
+    { value: 'warning', label: 'Warning' },
+    { value: 'error', label: 'Error' },
+];
+
 const addForm = useForm({
     key: '',
     label: '',
+    badge_color: 'ghost',
     description: '',
     supports_budget_items: false,
     supports_project_board: false,
@@ -25,6 +37,7 @@ const resetAddForm = () => {
     addForm.is_active = true;
     addForm.is_default = false;
     addForm.sort_order = 0;
+    addForm.badge_color = 'ghost';
 };
 
 const openAddModal = () => {
@@ -45,6 +58,7 @@ const submitAdd = () => {
 const editing = ref(null);
 const editForm = useForm({
     label: '',
+    badge_color: 'ghost',
     description: '',
     supports_budget_items: false,
     supports_project_board: false,
@@ -57,6 +71,7 @@ const openEditModal = (row) => {
     editing.value = row;
     editForm.clearErrors();
     editForm.label = row.label ?? '';
+    editForm.badge_color = row.badge_color ?? 'ghost';
     editForm.description = row.description ?? '';
     editForm.supports_budget_items = !!row.supports_budget_items;
     editForm.supports_project_board = !!row.supports_project_board;
@@ -76,6 +91,10 @@ const submitEdit = () => {
         },
     });
 };
+
+const badgeClass = (color) => `badge-${color || 'ghost'}`;
+const selectedAddBadgeClass = computed(() => badgeClass(addForm.badge_color));
+const selectedEditBadgeClass = computed(() => badgeClass(editForm.badge_color));
 </script>
 
 <template>
@@ -114,13 +133,21 @@ const submitEdit = () => {
                                 <th>Capability</th>
                                 <th>Status</th>
                                 <th>Pemakaian</th>
-                                <th class="text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in types" :key="row.id">
+                            <tr
+                                v-for="row in types"
+                                :key="row.id"
+                                class="cursor-pointer hover"
+                                tabindex="0"
+                                @click="openEditModal(row)"
+                                @keydown.enter.prevent="openEditModal(row)"
+                            >
                                 <td>
-                                    <div class="font-medium">{{ row.label }}</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="badge badge-sm border-0" :class="badgeClass(row.badge_color)">{{ row.label }}</span>
+                                    </div>
                                     <div v-if="row.description" class="text-xs text-base-content/60">{{ row.description }}</div>
                                 </td>
                                 <td class="font-mono text-xs">{{ row.key }}</td>
@@ -140,12 +167,9 @@ const submitEdit = () => {
                                     <div>{{ row.project_count }} project</div>
                                     <div class="text-base-content/60">{{ row.budget_count }} budget</div>
                                 </td>
-                                <td class="text-right">
-                                    <button type="button" class="btn btn-ghost btn-xs" @click="openEditModal(row)">Edit</button>
-                                </td>
                             </tr>
                             <tr v-if="!types.length">
-                                <td colspan="6" class="py-8 text-center text-base-content/50">Belum ada tipe project.</td>
+                                <td colspan="5" class="py-8 text-center text-base-content/50">Belum ada tipe project.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -167,19 +191,28 @@ const submitEdit = () => {
                         <input v-model="addForm.label" type="text" class="input input-bordered w-full" placeholder="Network Installation" />
                         <p v-if="addForm.errors.label" class="mt-1 text-xs text-error">{{ addForm.errors.label }}</p>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="label"><span class="label-text">Deskripsi</span></label>
-                        <textarea v-model="addForm.description" class="textarea textarea-bordered w-full" rows="3" />
+                    <div>
+                        <label class="label"><span class="label-text">Warna badge</span></label>
+                        <select v-model="addForm.badge_color" class="select select-bordered w-full">
+                            <option v-for="option in badgeColorOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                        <div class="mt-2">
+                            <span class="badge badge-sm border-0" :class="selectedAddBadgeClass">{{ addForm.label || 'Preview badge' }}</span>
+                        </div>
                     </div>
                     <div>
                         <label class="label"><span class="label-text">Urutan</span></label>
                         <input v-model.number="addForm.sort_order" type="number" min="0" class="input input-bordered w-full" />
                     </div>
-                    <div class="space-y-2 pt-8">
-                        <label class="flex items-center gap-2 text-sm"><input v-model="addForm.is_active" type="checkbox" class="checkbox checkbox-sm" /> Active</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="addForm.is_default" type="checkbox" class="checkbox checkbox-sm" /> Jadikan default</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="addForm.supports_budget_items" type="checkbox" class="checkbox checkbox-sm" /> Pakai budget item</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="addForm.supports_project_board" type="checkbox" class="checkbox checkbox-sm" /> Aktifkan board task</label>
+                    <div class="md:col-span-2">
+                        <label class="label"><span class="label-text">Deskripsi</span></label>
+                        <textarea v-model="addForm.description" class="textarea textarea-bordered w-full" rows="3" />
+                    </div>
+                    <div class="md:col-span-2 flex flex-wrap gap-x-5 gap-y-3 pt-1">
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="addForm.is_active" type="checkbox" class="toggle toggle-sm toggle-success" /> Active</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="addForm.is_default" type="checkbox" class="toggle toggle-sm toggle-primary" /> Jadikan default</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="addForm.supports_budget_items" type="checkbox" class="toggle toggle-sm toggle-info" /> Pakai budget item</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="addForm.supports_project_board" type="checkbox" class="toggle toggle-sm toggle-secondary" /> Aktifkan board task</label>
                     </div>
                 </div>
                 <div class="modal-action">
@@ -199,19 +232,28 @@ const submitEdit = () => {
                         <input v-model="editForm.label" type="text" class="input input-bordered w-full" />
                         <p v-if="editForm.errors.label" class="mt-1 text-xs text-error">{{ editForm.errors.label }}</p>
                     </div>
-                    <div class="md:col-span-2">
-                        <label class="label"><span class="label-text">Deskripsi</span></label>
-                        <textarea v-model="editForm.description" class="textarea textarea-bordered w-full" rows="3" />
+                    <div>
+                        <label class="label"><span class="label-text">Warna badge</span></label>
+                        <select v-model="editForm.badge_color" class="select select-bordered w-full">
+                            <option v-for="option in badgeColorOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
+                        <div class="mt-2">
+                            <span class="badge badge-sm border-0" :class="selectedEditBadgeClass">{{ editForm.label || editing?.label || 'Preview badge' }}</span>
+                        </div>
                     </div>
                     <div>
                         <label class="label"><span class="label-text">Urutan</span></label>
                         <input v-model.number="editForm.sort_order" type="number" min="0" class="input input-bordered w-full" />
                     </div>
-                    <div class="space-y-2 pt-8">
-                        <label class="flex items-center gap-2 text-sm"><input v-model="editForm.is_active" type="checkbox" class="checkbox checkbox-sm" /> Active</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="editForm.is_default" type="checkbox" class="checkbox checkbox-sm" /> Jadikan default</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="editForm.supports_budget_items" type="checkbox" class="checkbox checkbox-sm" /> Pakai budget item</label>
-                        <label class="flex items-center gap-2 text-sm"><input v-model="editForm.supports_project_board" type="checkbox" class="checkbox checkbox-sm" /> Aktifkan board task</label>
+                    <div class="md:col-span-2">
+                        <label class="label"><span class="label-text">Deskripsi</span></label>
+                        <textarea v-model="editForm.description" class="textarea textarea-bordered w-full" rows="3" />
+                    </div>
+                    <div class="md:col-span-2 flex flex-wrap gap-x-5 gap-y-3 pt-1">
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="editForm.is_active" type="checkbox" class="toggle toggle-sm toggle-success" /> Active</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="editForm.is_default" type="checkbox" class="toggle toggle-sm toggle-primary" /> Jadikan default</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="editForm.supports_budget_items" type="checkbox" class="toggle toggle-sm toggle-info" /> Pakai budget item</label>
+                        <label class="inline-flex items-center gap-2 text-sm"><input v-model="editForm.supports_project_board" type="checkbox" class="toggle toggle-sm toggle-secondary" /> Aktifkan board task</label>
                     </div>
                 </div>
                 <div class="modal-action">

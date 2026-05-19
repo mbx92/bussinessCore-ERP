@@ -330,7 +330,7 @@ const confirmCashAccountReassign = () => {
             </button>
           </div>
         </div>
-        <div class="overflow-x-auto">
+        <div class="mt-4 overflow-x-auto">
           <table class="table table-zebra">
             <thead>
               <tr>
@@ -402,7 +402,7 @@ const confirmCashAccountReassign = () => {
             {{ backfillForm.processing ? 'Memproses...' : `Perbaiki ${backfillReadyTotal} transaksi` }}
           </button>
         </div>
-        <div class="card-body pt-0">
+        <div class="card-body pt-4">
           <div class="grid gap-3 md:grid-cols-4">
             <div class="rounded-lg border border-base-300 bg-base-100 p-3">
               <p class="text-xs uppercase tracking-wide text-base-content/50">Siap diperbaiki</p>
@@ -565,7 +565,7 @@ const confirmCashAccountReassign = () => {
             {{ reassignForm.processing ? 'Memindahkan...' : `Pindahkan ${reassignTotal} transaksi` }}
           </button>
         </div>
-        <div class="card-body pt-0">
+        <div class="card-body pt-4">
           <div class="grid gap-3 md:grid-cols-3">
             <div>
               <label class="label py-0"><span class="label-text text-xs uppercase tracking-wide">Akun salah (dari)</span></label>
@@ -669,7 +669,7 @@ const confirmCashAccountReassign = () => {
             {{ correctionForm.processing ? 'Mengoreksi...' : 'Koreksi jurnal dipilih' }}
           </button>
         </div>
-        <div class="card-body pt-0">
+        <div class="card-body pt-4">
           <div v-if="posChannelCorrection?.can_correct" class="grid gap-3 md:grid-cols-3">
             <div class="rounded-lg border border-base-300 bg-base-100 p-3">
               <p class="text-xs uppercase tracking-wide text-base-content/50">Akun beban</p>

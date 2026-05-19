@@ -391,6 +391,9 @@ class StockManagementFilterTest extends TestCase
             'is_active' => true,
         ]);
         $product = $this->createProduct('MM-001', 'Produk Mismatch', 2);
+        $product->update([
+            'description' => 'Rak belakang dekat kabel cadangan',
+        ]);
 
         MasterProductWarehouseStock::query()->create([
             'master_product_id' => $product->id,
@@ -419,6 +422,9 @@ class StockManagementFilterTest extends TestCase
                 ->where('products.data.0.movement_mismatch', true)
                 ->where('products.data.0.movement_expected_qty', 5)
                 ->where('products.data.0.movement_delta_qty', 5)
+                ->where('products.data.0.description', 'Rak belakang dekat kabel cadangan')
+                ->where('products.data.0.recent_movements.0.type', 'opname_in')
+                ->where('products.data.0.recent_movements.0.note', 'Mismatch test')
                 ->etc());
     }
 

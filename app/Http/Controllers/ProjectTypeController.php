@@ -22,6 +22,7 @@ class ProjectTypeController extends Controller
                     'id' => $type->id,
                     'key' => $type->key,
                     'label' => $type->label,
+                    'badge_color' => $type->badge_color,
                     'description' => $type->description,
                     'supports_budget_items' => $type->supports_budget_items,
                     'supports_project_board' => $type->supports_project_board,
@@ -40,6 +41,7 @@ class ProjectTypeController extends Controller
         $validated = $request->validate([
             'key' => ['required', 'string', 'max:100', 'alpha_dash', 'unique:project_types,key'],
             'label' => ['required', 'string', 'max:150'],
+            'badge_color' => ['nullable', 'in:ghost,primary,secondary,accent,info,success,warning,error'],
             'description' => ['nullable', 'string'],
             'supports_budget_items' => ['nullable', 'boolean'],
             'supports_project_board' => ['nullable', 'boolean'],
@@ -52,6 +54,7 @@ class ProjectTypeController extends Controller
             $type = ProjectType::query()->create([
                 'key' => $validated['key'],
                 'label' => $validated['label'],
+                'badge_color' => $validated['badge_color'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'supports_budget_items' => (bool) ($validated['supports_budget_items'] ?? false),
                 'supports_project_board' => (bool) ($validated['supports_project_board'] ?? false),
@@ -70,6 +73,7 @@ class ProjectTypeController extends Controller
     {
         $validated = $request->validate([
             'label' => ['required', 'string', 'max:150'],
+            'badge_color' => ['nullable', 'in:ghost,primary,secondary,accent,info,success,warning,error'],
             'description' => ['nullable', 'string'],
             'supports_budget_items' => ['nullable', 'boolean'],
             'supports_project_board' => ['nullable', 'boolean'],
@@ -81,6 +85,7 @@ class ProjectTypeController extends Controller
         DB::transaction(function () use ($projectType, $validated): void {
             $projectType->update([
                 'label' => $validated['label'],
+                'badge_color' => $validated['badge_color'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'supports_budget_items' => (bool) ($validated['supports_budget_items'] ?? false),
                 'supports_project_board' => (bool) ($validated['supports_project_board'] ?? false),

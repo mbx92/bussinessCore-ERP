@@ -78,6 +78,7 @@ class ERPInventoryController extends Controller
                 'id' => $product->id,
                 'sku' => $product->sku,
                 'name' => $product->name,
+                'description' => $product->description,
                 'stock' => $qty,
                 'reserved_qty' => $reservedQty,
                 'available_qty' => $availableQty,
@@ -89,15 +90,37 @@ class ERPInventoryController extends Controller
         });
 
         $idsOnPage = collect($products->items())->pluck('id')->all();
+        $movementRowsByProduct = $selectedWarehouseId && count($idsOnPage) > 0
+            ? ProductStockMovement::query()
+                ->where('warehouse_id', $selectedWarehouseId)
+                ->whereIn('master_product_id', $idsOnPage)
+                ->orderByDesc('movement_date')
+                ->orderByDesc('id')
+                ->get(['id', 'master_product_id', 'movement_date', 'movement_type', 'qty', 'note'])
+                ->groupBy('master_product_id')
+                ->map(fn ($rows) => $rows
+                    ->take(5)
+                    ->map(fn (ProductStockMovement $movement) => [
+                        'id' => $movement->id,
+                        'date' => $movement->movement_date?->toDateString(),
+                        'type' => $movement->movement_type,
+                        'qty' => (float) $movement->qty,
+                        'note' => $movement->note,
+                    ])
+                    ->values()
+                    ->all())
+                ->all()
+            : [];
         $stockMismatch = $selectedWarehouseId
             ? app(WarehouseStockRebuildService::class)->mismatchSummary($selectedWarehouseId, $idsOnPage)
             : ['count' => 0, 'by_product' => []];
 
-        $products = $products->through(function (array $product) use ($stockMismatch) {
+        $products = $products->through(function (array $product) use ($movementRowsByProduct, $stockMismatch) {
             $mismatch = $stockMismatch['by_product'][$product['id']] ?? null;
             $product['movement_mismatch'] = $mismatch !== null;
             $product['movement_expected_qty'] = $mismatch['expected_qty'] ?? $product['stock'];
             $product['movement_delta_qty'] = $mismatch['delta_qty'] ?? 0;
+            $product['recent_movements'] = $movementRowsByProduct[$product['id']] ?? [];
 
             return $product;
         });

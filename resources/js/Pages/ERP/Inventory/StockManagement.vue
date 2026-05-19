@@ -28,6 +28,7 @@ const selectedWarehouseId = computed(() => filters.warehouse_id || props.filters
 const hasReservedStock = computed(() => (props.reserved_alert?.count ?? 0) > 0);
 const hasMovementMismatch = computed(() => (props.stock_movement_mismatch?.count ?? 0) > 0);
 const selectedReservedProduct = ref(null);
+const selectedProductDetail = ref(null);
 const batchAlertForm = useForm({
   enabled: true,
 });
@@ -115,6 +116,26 @@ const availabilityBadgeClass = (product) => {
   if (product.available_qty <= 0) return 'badge-error';
   if (product.available_qty < product.min_stock) return 'badge-warning';
   return 'badge-success';
+};
+
+const movementBadgeClass = (product) => (product.movement_mismatch ? 'badge-error' : 'badge-success');
+
+const movementBadgeText = (product) => (product.movement_mismatch ? `Selisih ${product.movement_delta_qty}` : 'Sinkron');
+
+const movementBadgeTitle = (product) => (
+  product.movement_mismatch
+    ? `Qty movement ${product.movement_expected_qty}, selisih ${product.movement_delta_qty}`
+    : 'Sinkron dengan stock movement'
+);
+
+const selectedProductForm = computed(() => {
+  const product = selectedProductDetail.value;
+  return product ? getForm(product) : null;
+});
+
+const openProductDetailModal = (product) => {
+  selectedProductDetail.value = product;
+  document.getElementById('modal-product-stock-detail')?.showModal();
 };
 
 const openReservedModal = (product) => {
@@ -237,60 +258,46 @@ const openReservedModal = (product) => {
                 <th>On Hand</th>
                 <th>Reserved</th>
                 <th>Available</th>
-                <th>Cek Movement</th>
-                <th>Min Stok</th>
                 <th>Notif Rendah</th>
                 <th>Total Terjual</th>
-                <th>Catatan</th>
                 <th>Status</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
               <tr
                 v-for="product in (products?.data || [])"
                 :key="product.id"
-                :class="(product.reserved_qty ?? 0) > 0 ? 'cursor-pointer hover' : ''"
-                @click="openReservedModal(product)"
+                class="cursor-pointer hover"
+                @click="openProductDetailModal(product)"
               >
                 <td class="font-mono text-xs">{{ product.sku }}</td>
-                <td class="font-semibold leading-tight">{{ product.name }}</td>
+                <td class="font-semibold leading-tight">
+                  <div>{{ product.name }}</div>
+                  <p class="mt-1 text-[11px] font-normal text-base-content/50">Klik untuk detail item</p>
+                </td>
                 <td><span class="badge badge-sm badge-ghost">{{ product.stock }}</span></td>
-                <td><span class="badge badge-sm" :class="product.reserved_qty > 0 ? 'badge-warning' : 'badge-ghost'">{{ product.reserved_qty }}</span></td>
+                <td @click.stop>
+                  <button
+                    type="button"
+                    class="badge badge-sm"
+                    :class="product.reserved_qty > 0 ? 'badge-warning' : 'badge-ghost'"
+                    :disabled="product.reserved_qty <= 0"
+                    @click="openReservedModal(product)"
+                  >
+                    {{ product.reserved_qty }}
+                  </button>
+                </td>
                 <td><span class="badge badge-sm text-white" :class="availabilityBadgeClass(product)">{{ product.available_qty }}</span></td>
                 <td>
-                  <span
-                    class="badge badge-sm"
-                    :class="product.movement_mismatch ? 'badge-error' : 'badge-success'"
-                    :title="product.movement_mismatch ? `Qty movement ${product.movement_expected_qty}, selisih ${product.movement_delta_qty}` : 'Sinkron dengan stock movement'"
-                  >
-                    {{ product.movement_mismatch ? `Selisih ${product.movement_delta_qty}` : 'Sinkron' }}
+                  <span class="badge badge-sm" :class="product.low_stock_alert_enabled ? 'badge-success' : 'badge-ghost'">
+                    {{ product.low_stock_alert_enabled ? 'Aktif' : 'Nonaktif' }}
                   </span>
                 </td>
-                <td>
-                  <input
-                    v-model.number="getForm(product).min_stock"
-                    type="number"
-                    min="0"
-                    class="input input-bordered input-xs h-8 w-20 text-xs"
-                    @click.stop
-                  />
-                </td>
-                <td @click.stop>
-                  <label
-                    class="inline-flex cursor-pointer items-center"
-                    :title="getForm(product).low_stock_alert_enabled ? 'Notifikasi stok rendah aktif' : 'Notifikasi stok rendah nonaktif'"
-                  >
-                    <input v-model="getForm(product).low_stock_alert_enabled" type="checkbox" class="toggle toggle-warning toggle-sm" />
-                  </label>
-                </td>
                 <td><span class="badge badge-sm badge-ghost">{{ product.total_sold }}</span></td>
-                <td><input v-model="getForm(product).note" type="text" class="input input-bordered input-xs h-8 w-32 text-xs" placeholder="Opsional" @click.stop /></td>
                 <td><StatusBadge :status="product.status" /></td>
-                <td><button class="btn btn-primary btn-xs" :disabled="getForm(product).processing" @click.stop="saveRow(product)">Simpan</button></td>
               </tr>
               <tr v-if="(products?.data || []).length === 0">
-                <td colspan="12" class="py-8 text-center text-base-content/50">
+                <td colspan="8" class="py-8 text-center text-base-content/50">
                   Tidak ada produk sesuai filter.
                 </td>
               </tr>
@@ -335,6 +342,124 @@ const openReservedModal = (product) => {
           </div>
 
           <div class="modal-action">
+            <form method="dialog">
+              <button class="btn">Tutup</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog id="modal-product-stock-detail" class="modal">
+        <div class="modal-box max-w-4xl">
+          <h3 class="text-lg font-bold">Detail Item Stok</h3>
+          <p v-if="selectedProductDetail" class="mt-1 text-sm text-base-content/70">
+            {{ selectedProductDetail.sku }} - {{ selectedProductDetail.name }}
+          </p>
+
+          <div v-if="selectedProductDetail" class="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">On hand</p>
+              <p class="mt-2 text-2xl font-bold">{{ selectedProductDetail.stock }}</p>
+            </div>
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">Reserved</p>
+              <div class="mt-2 flex items-center gap-2">
+                <span class="badge badge-sm" :class="selectedProductDetail.reserved_qty > 0 ? 'badge-warning' : 'badge-ghost'">
+                  {{ selectedProductDetail.reserved_qty }}
+                </span>
+                <button
+                  v-if="selectedProductDetail.reserved_qty > 0"
+                  type="button"
+                  class="btn btn-ghost btn-xs"
+                  @click="openReservedModal(selectedProductDetail)"
+                >
+                  Lihat proyek
+                </button>
+              </div>
+            </div>
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">Available</p>
+              <div class="mt-2">
+                <span class="badge badge-sm text-white" :class="availabilityBadgeClass(selectedProductDetail)">
+                  {{ selectedProductDetail.available_qty }}
+                </span>
+              </div>
+            </div>
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">Total terjual</p>
+              <p class="mt-2 text-2xl font-bold">{{ selectedProductDetail.total_sold }}</p>
+            </div>
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">Cek movement</p>
+              <div class="mt-2">
+                <span class="badge badge-sm text-white" :class="movementBadgeClass(selectedProductDetail)">
+                  {{ movementBadgeText(selectedProductDetail) }}
+                </span>
+              </div>
+              <p class="mt-2 text-xs text-base-content/60">
+                {{ movementBadgeTitle(selectedProductDetail) }}
+              </p>
+            </div>
+            <div class="rounded-xl border border-base-300 bg-base-100 p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-base-content/50">Status</p>
+              <div class="mt-2">
+                <StatusBadge :status="selectedProductDetail.status" />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="selectedProductDetail && selectedProductForm" class="mt-5 rounded-xl border border-base-300 bg-base-100 p-5">
+            <div class="flex flex-col gap-1">
+              <h4 class="text-sm font-semibold">Atur parameter item</h4>
+              <p class="text-xs text-base-content/60">Semua field yang sebelumnya diedit langsung di tabel sekarang dipindahkan ke modal ini.</p>
+            </div>
+
+            <div class="mt-4 grid gap-4 md:grid-cols-2">
+              <div>
+                <label class="label"><span class="label-text text-xs uppercase tracking-wide">Minimum stok</span></label>
+                <input
+                  v-model.number="selectedProductForm.min_stock"
+                  type="number"
+                  min="0"
+                  class="input input-bordered w-full"
+                />
+              </div>
+              <div>
+                <label class="label"><span class="label-text text-xs uppercase tracking-wide">Notif stok rendah</span></label>
+                <label
+                  class="flex min-h-12 items-center justify-between rounded-lg border border-base-300 px-4 py-3"
+                  :title="selectedProductForm.low_stock_alert_enabled ? 'Notifikasi stok rendah aktif' : 'Notifikasi stok rendah nonaktif'"
+                >
+                  <span class="text-sm">{{ selectedProductForm.low_stock_alert_enabled ? 'Aktif' : 'Nonaktif' }}</span>
+                  <input v-model="selectedProductForm.low_stock_alert_enabled" type="checkbox" class="toggle toggle-warning" />
+                </label>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="label"><span class="label-text text-xs uppercase tracking-wide">Catatan</span></label>
+              <textarea
+                v-model="selectedProductForm.note"
+                class="textarea textarea-bordered min-h-28 w-full"
+                placeholder="Opsional"
+              />
+              <p class="mt-2 text-xs text-base-content/60">
+                Fallback catatan saat kosong: {{ selectedProductDetail.description || '-' }}
+              </p>
+            </div>
+
+          </div>
+
+          <div class="modal-action">
+            <button
+              v-if="selectedProductDetail && selectedProductForm"
+              type="button"
+              class="btn btn-primary"
+              :disabled="selectedProductForm.processing"
+              @click="saveRow(selectedProductDetail)"
+            >
+              {{ selectedProductForm.processing ? 'Menyimpan...' : 'Simpan perubahan' }}
+            </button>
             <form method="dialog">
               <button class="btn">Tutup</button>
             </form>

@@ -59,6 +59,21 @@ watch([search, status, projectType, perPage], () => {
 });
 
 const projectTypeLabel = (value) => props.project_types.find((type) => type.key === value)?.label ?? value;
+const projectTypeMeta = (value) => props.project_types.find((type) => type.key === value) ?? null;
+const projectTypeBadgeClass = (value) => {
+    const type = projectTypeMeta(value);
+    if (type?.badge_color) return `badge-${type.badge_color}`;
+    const key = String(value ?? '').toLowerCase();
+
+    if (type?.supports_budget_items && type?.supports_project_board) return 'badge-primary';
+    if (type?.supports_budget_items) return 'badge-info';
+    if (type?.supports_project_board) return 'badge-secondary';
+    if (key.includes('website') || key.includes('web')) return 'badge-accent';
+    if (key.includes('cctv') || key.includes('network') || key.includes('infra')) return 'badge-warning';
+    if (key.includes('maintenance') || key.includes('support')) return 'badge-success';
+
+    return 'badge-ghost';
+};
 
 const openAddProjectModal = () => {
     projectForm.clearErrors();
@@ -138,7 +153,7 @@ const submitProject = () => {
                 </div>
                 <div class="p-0">
                     <div class="overflow-x-auto">
-                        <table class="table table-zebra">
+                        <table class="table table-zebra table-sm text-xs">
                             <thead>
                                 <tr>
                                     <th>Nama Project</th>
@@ -159,18 +174,20 @@ const submitProject = () => {
                                     @click="router.visit(route('projects.show', p.id))"
                                     @keydown.enter.prevent="router.visit(route('projects.show', p.id))"
                                 >
-                                    <td class="font-medium">{{ p.name }}</td>
-                                    <td>{{ p.client_name }}</td>
+                                    <td class="py-2 font-medium leading-tight">{{ p.name }}</td>
+                                    <td class="py-2 leading-tight text-base-content/75">{{ p.client_name }}</td>
                                     <td>
-                                        <span class="badge badge-ghost badge-sm">{{ projectTypeLabel(p.project_type) }}</span>
+                                        <span class="badge badge-sm border-0 text-[11px]" :class="projectTypeBadgeClass(p.project_type)">
+                                            {{ projectTypeLabel(p.project_type) }}
+                                        </span>
                                     </td>
-                                    <td><StatusBadge :status="p.status" /></td>
-                                    <td class="font-medium">{{ format(p.total_value) }}</td>
-                                    <td class="whitespace-nowrap text-sm text-base-content/70">{{ formatDate(p.started_at) }}</td>
-                                    <td>
+                                    <td class="py-2"><StatusBadge :status="p.status" /></td>
+                                    <td class="py-2 font-medium whitespace-nowrap">{{ format(p.total_value) }}</td>
+                                    <td class="py-2 whitespace-nowrap text-[11px] text-base-content/70">{{ formatDate(p.started_at) }}</td>
+                                    <td class="py-2">
                                         <div class="flex items-center gap-2">
-                                            <progress class="progress progress-success w-20" :value="p.paid_amount" :max="p.total_value || 1" />
-                                            <span class="text-xs text-base-content/60">{{ format(p.paid_amount) }} / {{ format(p.total_value) }}</span>
+                                            <progress class="progress progress-success h-2 w-16" :value="p.paid_amount" :max="p.total_value || 1" />
+                                            <span class="text-[11px] text-base-content/60">{{ format(p.paid_amount) }} / {{ format(p.total_value) }}</span>
                                         </div>
                                     </td>
                                 </tr>
