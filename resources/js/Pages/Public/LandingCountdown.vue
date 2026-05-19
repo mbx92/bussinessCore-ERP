@@ -1,5 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
+import { RocketLaunchIcon } from '@heroicons/vue/24/outline';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({
@@ -120,7 +121,9 @@ onBeforeUnmount(() => {
                 {{ isLive ? 'Sudah live' : (landing?.content?.subheadline || 'Menuju hari peluncuran') }}
               </p>
             </div>
-            <div class="h-14 w-14 rounded-2xl border border-cyan-300/30 bg-cyan-300/10" />
+            <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/30 bg-cyan-300/10 text-cyan-200 shadow-[0_0_24px_rgba(34,211,238,0.16)]">
+              <RocketLaunchIcon class="h-7 w-7" />
+            </div>
           </div>
 
           <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
