@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountingInventoryController;
+use App\Http\Controllers\AppInstallerController;
 use App\Http\Controllers\CashBankTransferController;
 use App\Http\Controllers\CashflowController;
 use App\Http\Controllers\CashInController;
@@ -68,6 +69,11 @@ Route::get('/storage/{path}', function (string $path) {
 
     return response()->file($disk->path($path));
 })->where('path', '.*')->name('storage.serve');
+
+Route::get('/install', [AppInstallerController::class, 'create'])->name('install.show');
+Route::post('/install', [AppInstallerController::class, 'store'])->name('install.store');
+Route::post('/install/test-connection', [AppInstallerController::class, 'testConnection'])->name('install.test-connection');
+Route::get('/install/complete', [AppInstallerController::class, 'complete'])->name('install.complete');
 
 Route::get('/', [PublicHomeController::class, 'index'])
     ->middleware('throttle:landing-public')

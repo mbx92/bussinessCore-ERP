@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\EnabledModuleRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,6 +16,8 @@ class ErpSetting extends Model
         'app_tagline',
         'app_logo_path',
         'module_menu_layout',
+        'enabled_modules',
+        'installed_at',
         'thermal_printer_enabled',
         'thermal_printer_host',
         'thermal_printer_port',
@@ -49,6 +52,8 @@ class ErpSetting extends Model
             'thermal_pos_margin_left_mm' => 'decimal:2',
             'thermal_pos_section_gap' => 'integer',
             'thermal_pos_header_emphasis' => 'boolean',
+            'enabled_modules' => 'array',
+            'installed_at' => 'datetime',
             'label_smb_enabled' => 'boolean',
             'label_smb_profile_id' => 'integer',
             'label_lan_enabled' => 'boolean',
@@ -149,5 +154,34 @@ class ErpSetting extends Model
         }
 
         return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function enabledModuleKeys(): array
+    {
+        $modules = $this->enabled_modules;
+
+        if (! is_array($modules) || $modules === []) {
+            return EnabledModuleRegistry::allModuleKeys();
+        }
+
+        $allowed = array_fill_keys(EnabledModuleRegistry::allModuleKeys(), true);
+
+        return array_values(array_filter(
+            array_unique(array_map('strval', $modules)),
+            static fn (string $key): bool => isset($allowed[$key]),
+        ));
+    }
+
+    public function isModuleEnabled(string $moduleKey): bool
+    {
+        return in_array($moduleKey, $this->enabledModuleKeys(), true);
+    }
+
+    public function getIsInstalledAttribute(): bool
+    {
+        return $this->installed_at !== null;
     }
 }

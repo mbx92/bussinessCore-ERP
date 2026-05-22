@@ -7,13 +7,19 @@ use App\ERP\Core\Services\ErpCompanyResolver;
 use App\Models\ErpSetting;
 use App\Models\MasterProduct;
 use App\Models\User;
+use App\Services\AppInstallationService;
 use App\Support\AppNotificationCenter;
+use App\Support\EnabledModuleRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(private readonly AppInstallationService $installationService)
+    {
+    }
+
     /**
      * The root template that is loaded on the first page visit.
      *
@@ -37,8 +43,11 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $user = $request->user();
-        $erpSetting = ErpSetting::query()->first();
-        $notificationCenter = app(AppNotificationCenter::class)->buildFor($user);
+        $installStatus = $this->installationService->status();
+        $erpSetting = $installStatus['tables_ready'] ? ErpSetting::query()->first() : null;
+        $notificationCenter = ($installStatus['installed'] && $user)
+            ? app(AppNotificationCenter::class)->buildFor($user)
+            : ['total_count' => 0, 'groups' => [], 'items' => []];
         $lowStockGroup = collect($notificationCenter['groups'] ?? [])->firstWhere('key', 'low_stock');
 
         return [
@@ -59,13 +68,15 @@ class HandleInertiaRequests extends Middleware
             'devLoginSeed' => fn () => $request->session()->get('devLoginSeed'),
             'inventoryAlerts' => fn () => [
                 'lowStockCount' => (int) ($lowStockGroup['count'] ?? 0),
-                'lowStockItems' => MasterProduct::query()
-                    ->where('product_type', '!=', MasterProduct::PRODUCT_TYPE_SERVICE)
-                    ->where('low_stock_alert_enabled', true)
-                    ->whereColumn('stock', '<=', 'min_stock')
-                    ->orderBy('stock')
-                    ->limit(5)
-                    ->get(['id', 'sku', 'name', 'stock', 'min_stock', 'low_stock_alert_enabled']),
+                'lowStockItems' => $installStatus['installed']
+                    ? MasterProduct::query()
+                        ->where('product_type', '!=', MasterProduct::PRODUCT_TYPE_SERVICE)
+                        ->where('low_stock_alert_enabled', true)
+                        ->whereColumn('stock', '<=', 'min_stock')
+                        ->orderBy('stock')
+                        ->limit(5)
+                        ->get(['id', 'sku', 'name', 'stock', 'min_stock', 'low_stock_alert_enabled'])
+                    : [],
             ],
             'notificationCenter' => fn () => $notificationCenter,
             'erpSetting' => fn () => [
@@ -73,6 +84,12 @@ class HandleInertiaRequests extends Middleware
                 'app_tagline' => $erpSetting?->app_tagline ?? 'Business Operating Platform',
                 'app_logo_url' => $erpSetting?->app_logo_path ? Storage::url($erpSetting->app_logo_path) : null,
                 'module_menu_layout' => $erpSetting?->resolvedModuleMenuLayout() ?? ErpSetting::MODULE_MENU_LAYOUT_GRID,
+            ],
+            'appInstall' => fn () => [
+                'installed' => (bool) $installStatus['installed'],
+                'database_ready' => (bool) $installStatus['database_ready'],
+                'tables_ready' => (bool) $installStatus['tables_ready'],
+                'enabled_modules' => $erpSetting?->enabledModuleKeys() ?? EnabledModuleRegistry::allModuleKeys(),
             ],
             'erpCompanyContext' => fn () => $this->erpCompanyContextProps($request),
             'uiPreferences' => fn () => $user ? $user->resolvedUiPreferences() : User::defaultUiPreferences(),
@@ -90,7 +107,7 @@ class HandleInertiaRequests extends Middleware
      */
     private function erpCompanyContextProps(Request $request): ?array
     {
-        if (! $request->user()) {
+        if (! $request->user() || ! $this->installationService->status()['installed']) {
             return null;
         }
 

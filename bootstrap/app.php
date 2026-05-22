@@ -1,6 +1,8 @@
 <?php
 
 use App\ERP\Shared\Services\ErpSystemLogger;
+use App\Http\Middleware\EnsureAppInstalled;
+use App\Http\Middleware\EnsureModuleEnabled;
 use App\Http\Middleware\ErpMaintenanceMode;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogCmsAdminPanelAccess;
@@ -33,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->web(append: [
+            EnsureAppInstalled::class,
+            EnsureModuleEnabled::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             ErpMaintenanceMode::class,

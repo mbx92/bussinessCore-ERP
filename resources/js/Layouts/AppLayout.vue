@@ -30,6 +30,7 @@ const flash = computed(() => page.props.flash);
 const inventoryAlerts = computed(() => page.props.inventoryAlerts ?? { lowStockCount: 0, lowStockItems: [] });
 const localNotificationCenter = ref(page.props.notificationCenter ?? { total_count: 0, groups: [], items: [] });
 const erpSetting = computed(() => page.props.erpSetting ?? {});
+const appInstall = computed(() => page.props.appInstall ?? { installed: true, enabled_modules: [] });
 const uiPreferences = computed(() => page.props.uiPreferences ?? { module_menu_orders: {} });
 const sidebarOpen = ref(false);
 const readSidebarCollapsedPreference = () => {
@@ -221,9 +222,11 @@ const assistantMetaFromIntent = (intent) => {
 };
 
 const permissions = computed(() => page.props.auth?.permissions ?? []);
+const enabledModules = computed(() => new Set(appInstall.value?.enabled_modules ?? []));
 const usePermissionMenus = computed(() =>
     permissions.value.some((p) => typeof p === 'string' && p.startsWith('menu.')),
 );
+const isModuleEnabled = (moduleKey) => enabledModules.value.has(moduleKey);
 
 const canSeeNavItem = (item) => {
     if (item.permissionAny?.length) {
@@ -270,17 +273,17 @@ const sidebarModules = computed(() => {
 
     if (showErp) {
         const erpItems = [
-            { name: 'Accounting', href: route('erp.accounting'), icon: ArrowDownCircleIcon, permission: 'menu.erp.accounting' },
-            { name: 'Sales', href: route('erp.sales'), icon: BanknotesIcon, permission: 'menu.erp.sales' },
-            { name: 'Purchasing', href: route('erp.purchasing'), icon: ShoppingCartIcon, permission: 'menu.erp.purchasing' },
-            { name: 'Inventory', href: route('erp.inventory'), icon: ArchiveBoxIcon, permission: 'menu.erp.inventory' },
-            { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon, permission: 'menu.erp.projects' },
-            { name: 'R&D', href: route('rnd.dashboard'), icon: BeakerIcon, permissionAny: ['menu.erp.rnd', 'manage-rnd'] },
-            { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon, permission: 'menu.erp.hr' },
-            { name: 'CRM', href: route('erp.crm'), icon: ShareIcon, permission: 'menu.erp.crm' },
-            { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon, permission: 'menu.erp.calendar' },
-            { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon, permission: 'menu.erp.reporting' },
-        ].filter(canSeeNavItem);
+            { name: 'Accounting', href: route('erp.accounting'), icon: ArrowDownCircleIcon, permission: 'menu.erp.accounting', moduleKey: 'accounting' },
+            { name: 'Sales', href: route('erp.sales'), icon: BanknotesIcon, permission: 'menu.erp.sales', moduleKey: 'sales' },
+            { name: 'Purchasing', href: route('erp.purchasing'), icon: ShoppingCartIcon, permission: 'menu.erp.purchasing', moduleKey: 'purchasing' },
+            { name: 'Inventory', href: route('erp.inventory'), icon: ArchiveBoxIcon, permission: 'menu.erp.inventory', moduleKey: 'inventory' },
+            { name: 'Projects', href: route('erp.projects'), icon: CodeBracketIcon, permission: 'menu.erp.projects', moduleKey: 'projects' },
+            { name: 'R&D', href: route('rnd.dashboard'), icon: BeakerIcon, permissionAny: ['menu.erp.rnd', 'manage-rnd'], moduleKey: 'rnd' },
+            { name: 'HR', href: route('erp.hr'), icon: UserCircleIcon, permission: 'menu.erp.hr', moduleKey: 'hr' },
+            { name: 'CRM', href: route('erp.crm'), icon: ShareIcon, permission: 'menu.erp.crm', moduleKey: 'crm' },
+            { name: 'Calendar', href: route('erp.calendar'), icon: CalendarDaysIcon, permission: 'menu.erp.calendar', moduleKey: 'calendar' },
+            { name: 'Reporting', href: route('erp.reporting'), icon: ChartBarIcon, permission: 'menu.erp.reporting', moduleKey: 'reporting' },
+        ].filter((item) => isModuleEnabled(item.moduleKey)).filter(canSeeNavItem);
         if (erpItems.length) {
             modules.push({ title: 'Modul ERP', items: erpItems });
         }
@@ -288,10 +291,10 @@ const sidebarModules = computed(() => {
 
     if (showCms) {
         const cmsItems = [
-            { name: 'Dashboard CMS', href: route('erp.cms'), icon: NewspaperIcon, permission: 'menu.cms.dashboard' },
-            { name: 'Landing sites', href: route('erp.cms.sites'), icon: GlobeAltIcon, permission: 'menu.cms.sites' },
-            { name: 'Media library', href: route('erp.cms.media'), icon: PhotoIcon, permission: 'menu.cms.media' },
-        ].filter(canSeeNavItem);
+            { name: 'Dashboard CMS', href: route('erp.cms'), icon: NewspaperIcon, permission: 'menu.cms.dashboard', moduleKey: 'cms' },
+            { name: 'Landing sites', href: route('erp.cms.sites'), icon: GlobeAltIcon, permission: 'menu.cms.sites', moduleKey: 'cms' },
+            { name: 'Media library', href: route('erp.cms.media'), icon: PhotoIcon, permission: 'menu.cms.media', moduleKey: 'cms' },
+        ].filter((item) => isModuleEnabled(item.moduleKey)).filter(canSeeNavItem);
         if (cmsItems.length) {
             modules.push({ title: 'Website CMS', items: cmsItems });
         }
@@ -299,8 +302,8 @@ const sidebarModules = computed(() => {
 
     if (showPersonal) {
         const personalItems = [
-            { name: 'Beranda', href: route('personal'), icon: WalletIcon, permission: 'menu.personal' },
-        ].filter(canSeeNavItem);
+            { name: 'Beranda', href: route('personal'), icon: WalletIcon, permission: 'menu.personal', moduleKey: 'personal' },
+        ].filter((item) => isModuleEnabled(item.moduleKey)).filter(canSeeNavItem);
         if (personalItems.length) {
             modules.push({ title: 'Personal', items: personalItems });
         }

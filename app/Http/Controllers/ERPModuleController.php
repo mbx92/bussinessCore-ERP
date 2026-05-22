@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Support\ModuleWorkspaceRegistry;
+use App\Models\ErpSetting;
+use App\Support\EnabledModuleRegistry;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -60,10 +62,13 @@ class ERPModuleController extends Controller
 
     private function renderRegistryModule(string $moduleKey): Response
     {
+        $setting = ErpSetting::query()->first();
+        $enabledModules = $setting?->enabledModuleKeys() ?? EnabledModuleRegistry::allModuleKeys();
+
         return Inertia::render('ERP/Modules/Index', [
             'moduleKey' => $moduleKey,
             'module' => ModuleWorkspaceRegistry::labelFor($moduleKey),
-            'menus' => ModuleWorkspaceRegistry::menusFor($moduleKey),
+            'menus' => EnabledModuleRegistry::filterMenus(ModuleWorkspaceRegistry::menusFor($moduleKey), $enabledModules),
         ]);
     }
 }

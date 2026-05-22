@@ -20,6 +20,8 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
+        request()->session()->forget('installer_completed');
+
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
