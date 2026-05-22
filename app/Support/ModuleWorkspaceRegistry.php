@@ -41,9 +41,9 @@ final class ModuleWorkspaceRegistry
             'sales' => [
                 'label' => 'Sales',
                 'menus' => [
-                    ['key' => 'pos-produk', 'title' => 'POS Produk', 'description' => 'Kasir untuk penjualan produk kemasan plastik dan makanan.', 'route' => 'erp.sales.pos', 'icon' => 'shopping-cart', 'newTab' => true, 'url' => route('erp.sales.pos', ['fullscreen' => 1])],
+                    ['key' => 'pos-produk', 'title' => 'POS Produk', 'description' => 'Kasir untuk penjualan produk umum dan retail.', 'route' => 'erp.sales.pos', 'icon' => 'shopping-cart', 'newTab' => true, 'url' => route('erp.sales.pos', ['fullscreen' => 1])],
                     ['key' => 'transaksi', 'title' => 'Transaksi', 'description' => 'Riwayat transaksi POS yang sudah diproses.', 'route' => 'erp.sales.pos.transactions', 'icon' => 'document-text'],
-                    ['key' => 'invoice-project', 'title' => 'Invoice Project', 'description' => 'Pembuatan invoice untuk project software, CCTV, dan jaringan.', 'route' => 'erp.sales.project-invoices', 'icon' => 'document-text'],
+                    ['key' => 'invoice-project', 'title' => 'Invoice Project', 'description' => 'Pembuatan invoice untuk project dan layanan profesional.', 'route' => 'erp.sales.project-invoices', 'icon' => 'document-text'],
                 ],
             ],
             'purchasing' => [

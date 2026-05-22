@@ -17,7 +17,7 @@ const { trackCtaClick } = useLandingTracking();
   <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100">
     <div class="mx-auto flex min-h-screen w-full max-w-5xl flex-col justify-center px-6 py-14">
       <div class="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur md:p-12">
-        <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200/80">OCNetworks</p>
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200/80">BusinessCore</p>
         <h1 class="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
           {{ landing?.content?.headline || 'Website sedang disiapkan' }}
         </h1>

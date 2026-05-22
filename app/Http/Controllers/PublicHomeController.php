@@ -18,13 +18,13 @@ class PublicHomeController extends Controller
         $host = $this->normalizeHost($request);
         $landing = $this->resolveLanding($host);
 
-        if ($host === 'ocnetworks.web.id') {
+        if ($host === 'launch.businesscore.local') {
             if ($landing) {
                 CmsAccessLogger::logLandingPublic($request, (int) $landing->id);
             }
 
             return Inertia::render('Public/LandingCountdown', [
-                'landing' => $this->landingPayload($landing, $host, 'OCNetworks'),
+                'landing' => $this->landingPayload($landing, $host, 'BusinessCore'),
                 'countdownAt' => $this->resolveCountdownAt($landing),
             ]);
         }
@@ -100,7 +100,7 @@ class PublicHomeController extends Controller
     private function resolveCountdownAt(?LandingSite $landing): string
     {
         return $landing?->page?->countdown_at?->toIso8601String()
-            ?? (string) config('app.ocnetworks_launch_at');
+            ?? (string) config('app.public_launch_at');
     }
 
     /**
@@ -111,7 +111,7 @@ class PublicHomeController extends Controller
         $published = (bool) ($landing?->page?->is_published ?? false);
 
         return [
-            'name' => $landing?->name ?? $fallbackName ?? 'OCNetworks',
+            'name' => $landing?->name ?? $fallbackName ?? 'BusinessCore',
             'domain' => $landing?->domain ?? $host,
             'layout_key' => $landing?->layout_key ?? 'countdown',
             'warehouse' => $landing?->warehouse,

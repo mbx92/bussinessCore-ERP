@@ -23,7 +23,7 @@ import {
 } from '@heroicons/vue/24/outline';
 import FlashMessage from '@/Components/FlashMessage.vue';
 
-const SIDEBAR_COLLAPSE_STORAGE_KEY = 'ocn_sidebar_collapsed';
+const SIDEBAR_COLLAPSE_STORAGE_KEY = 'businesscore_sidebar_collapsed';
 const page = usePage();
 const auth = computed(() => page.props.auth);
 const flash = computed(() => page.props.flash);
@@ -66,13 +66,13 @@ const chatbotIntentCatalog = [
         key: 'stock_lookup',
         label: 'Cek stok',
         source: 'data',
-        examples: ['stok lid cup', 'cek stok kabel lan'],
+        examples: ['stok produk contoh', 'cek stok item utama'],
     },
     {
         key: 'product_price_lookup',
         label: 'Cek harga',
         source: 'data',
-        examples: ['harga standing pouch', 'berapa harga kabel lan'],
+        examples: ['harga produk contoh', 'berapa harga item utama'],
     },
     {
         key: 'pos_sales_today',
@@ -115,7 +115,7 @@ const chatbotIntentCatalog = [
 const quickReplyGroups = [
     {
         title: 'Produk',
-        chips: ['stok lid cup', 'harga standing pouch', 'stok rendah'],
+        chips: ['stok produk contoh', 'harga produk contoh', 'stok rendah'],
     },
     {
         title: 'Penjualan',
@@ -590,8 +590,8 @@ const handleSidebarItemMouseLeave = () => {
                     <span class="font-bold text-sm">ERP</span>
                 </div>
                 <div v-if="!desktopSidebarCollapsed">
-                    <span class="block font-bold text-lg tracking-tight text-white leading-none">{{ erpSetting?.app_name || 'OCN ERP Suite' }}</span>
-                    <span class="block text-xs text-slate-400 mt-1">{{ erpSetting?.app_tagline || 'Integrated Business Platform' }}</span>
+                    <span class="block font-bold text-lg tracking-tight text-white leading-none">{{ erpSetting?.app_name || 'BusinessCore ERP' }}</span>
+                    <span class="block text-xs text-slate-400 mt-1">{{ erpSetting?.app_tagline || 'Business Operating Platform' }}</span>
                 </div>
                 <button class="ml-auto md:hidden text-slate-300" @click="sidebarOpen = false">
                     <XMarkIcon class="w-5 h-5" />

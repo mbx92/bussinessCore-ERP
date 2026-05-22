@@ -302,7 +302,7 @@ class LanEscPosPrinter
         $lines = [
             str_repeat('=', $cols),
             $titleLine,
-            'PaymentSystemOCN',
+            'BusinessCore ERP',
             "Kertas: {$labelPaper}",
             $now,
             str_repeat('-', $cols),

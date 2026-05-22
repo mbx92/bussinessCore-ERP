@@ -69,8 +69,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'notificationCenter' => fn () => $notificationCenter,
             'erpSetting' => fn () => [
-                'app_name' => $erpSetting?->app_name ?? 'OCN ERP Suite',
-                'app_tagline' => $erpSetting?->app_tagline ?? 'Integrated Business Platform',
+                'app_name' => $erpSetting?->app_name ?? 'BusinessCore ERP',
+                'app_tagline' => $erpSetting?->app_tagline ?? 'Business Operating Platform',
                 'app_logo_url' => $erpSetting?->app_logo_path ? Storage::url($erpSetting->app_logo_path) : null,
                 'module_menu_layout' => $erpSetting?->resolvedModuleMenuLayout() ?? ErpSetting::MODULE_MENU_LAYOUT_GRID,
             ],

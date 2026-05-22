@@ -196,7 +196,7 @@ class ServerMetricsService
             $t0 = microtime(true);
             Http::timeout(5)
                 ->connectTimeout(3)
-                ->withHeaders(['User-Agent' => 'PaymentSystemOCN-ServerMetrics/1.0'])
+                ->withHeaders(['User-Agent' => 'BusinessCoreERP-ServerMetrics/1.0'])
                 ->get($url);
             $ms = round((microtime(true) - $t0) * 1000, 3);
         } catch (Throwable $e) {

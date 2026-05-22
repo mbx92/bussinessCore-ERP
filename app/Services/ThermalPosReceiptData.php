@@ -34,7 +34,7 @@ final class ThermalPosReceiptData
     public static function sample(): self
     {
         return new self(
-            appName: 'OCN ERP Suite',
+            appName: 'BusinessCore ERP',
             transactionNumber: 'POS-000123',
             date: now()->format('Y-m-d'),
             time: now()->format('H:i'),
@@ -51,8 +51,8 @@ final class ThermalPosReceiptData
             ],
             additionalFee: '2.000',
             additionalCharges: [
-                ['name' => 'Parkir', 'amount' => '1.000'],
-                ['name' => 'Kemasan', 'amount' => '1.000'],
+                ['name' => 'Biaya Layanan', 'amount' => '1.000'],
+                ['name' => 'Pembulatan', 'amount' => '1.000'],
             ],
         );
     }

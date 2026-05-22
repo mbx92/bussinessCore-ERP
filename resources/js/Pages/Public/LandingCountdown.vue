@@ -63,7 +63,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Head :title="landing?.content?.seo_title || `${landing?.name || 'OCNetworks'} — Launch Countdown`" />
+  <Head :title="landing?.content?.seo_title || `${landing?.name || 'BusinessCore'} — Launch Countdown`" />
   <div class="min-h-screen overflow-hidden bg-[#07111f] text-white">
     <div class="absolute inset-0">
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(34,197,94,0.18),_transparent_28%),linear-gradient(135deg,_#07111f_0%,_#0f172a_52%,_#081018_100%)]" />
@@ -73,12 +73,12 @@ onBeforeUnmount(() => {
     <div class="relative mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-16">
       <section class="grid w-full gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
         <div>
-          <p class="text-xs font-bold uppercase tracking-[0.22em] text-cyan-200/80">OCNetworks</p>
+          <p class="text-xs font-bold uppercase tracking-[0.22em] text-cyan-200/80">BusinessCore</p>
           <h1 class="mt-4 max-w-3xl text-4xl font-black tracking-tight text-white md:text-6xl">
             {{ landing?.content?.headline || 'Website resmi baru sedang menuju peluncuran.' }}
           </h1>
           <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-            {{ landing?.content?.body || 'Kami sedang menyiapkan halaman publik OCN dengan presentasi layanan, profil perusahaan, dan kanal kontak yang lebih rapi.' }}
+            {{ landing?.content?.body || 'Kami sedang menyiapkan halaman publik baru dengan presentasi layanan, profil perusahaan, dan kanal kontak yang lebih rapi.' }}
           </p>
 
           <div class="mt-8 flex flex-wrap items-center gap-3 text-sm text-slate-300">

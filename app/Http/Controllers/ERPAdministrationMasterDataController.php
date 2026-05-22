@@ -59,8 +59,8 @@ class ERPAdministrationMasterDataController extends Controller
 
         return Inertia::render('ERP/Admin/ErpSettings', [
             'setting' => [
-                'app_name' => $setting?->app_name ?? 'OCN ERP Suite',
-                'app_tagline' => $setting?->app_tagline ?? 'Integrated Business Platform',
+                'app_name' => $setting?->app_name ?? 'BusinessCore ERP',
+                'app_tagline' => $setting?->app_tagline ?? 'Business Operating Platform',
                 'app_logo_path' => $setting?->app_logo_path,
                 'app_logo_url' => $setting?->app_logo_path ? Storage::url($setting->app_logo_path) : null,
                 'module_menu_layout' => $setting?->resolvedModuleMenuLayout() ?? ErpSetting::MODULE_MENU_LAYOUT_GRID,
@@ -79,8 +79,8 @@ class ERPAdministrationMasterDataController extends Controller
         ]);
 
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         $logoPath = $setting->app_logo_path;
@@ -306,7 +306,7 @@ class ERPAdministrationMasterDataController extends Controller
                         'label' => 'Cek stok produk',
                         'source' => 'data',
                         'description' => 'Mencari produk aktif lalu menampilkan stok live dari database.',
-                        'examples' => ['stok lid cup', 'cek stok kabel lan'],
+                        'examples' => ['stok produk contoh', 'cek stok item utama'],
                         'custom_reply_supported' => true,
                     ],
                     [
@@ -314,7 +314,7 @@ class ERPAdministrationMasterDataController extends Controller
                         'label' => 'Cek harga produk',
                         'source' => 'data',
                         'description' => 'Mengambil harga jual live produk berdasarkan nama, SKU, atau barcode.',
-                        'examples' => ['harga standing pouch', 'berapa harga kabel lan'],
+                        'examples' => ['harga produk contoh', 'berapa harga item utama'],
                         'custom_reply_supported' => true,
                     ],
                     [
@@ -322,7 +322,7 @@ class ERPAdministrationMasterDataController extends Controller
                         'label' => 'Detail produk',
                         'source' => 'data',
                         'description' => 'Menampilkan detail stok, SKU, barcode, satuan, dan harga jual.',
-                        'examples' => ['detail produk lid cup', 'info barang switch 8 port'],
+                        'examples' => ['detail produk contoh', 'info barang utama'],
                         'custom_reply_supported' => false,
                     ],
                     [
@@ -717,8 +717,8 @@ class ERPAdministrationMasterDataController extends Controller
         ]);
 
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         $host = isset($validated['thermal_printer_host']) ? trim((string) $validated['thermal_printer_host']) : null;
@@ -789,7 +789,7 @@ class ERPAdministrationMasterDataController extends Controller
         ]);
 
         $setting = ErpSetting::query()->first();
-        $sample = ThermalPosReceiptData::sample()->withAppName((string) ($setting?->app_name ?: 'OCN ERP Suite'));
+        $sample = ThermalPosReceiptData::sample()->withAppName((string) ($setting?->app_name ?: 'BusinessCore ERP'));
 
         $template = [
             'header' => $validated['thermal_pos_header_template'] ?? null,
@@ -836,7 +836,7 @@ class ERPAdministrationMasterDataController extends Controller
         $paper = $printer->normalizePaperWidth($validated['thermal_paper_width']);
         $cols = $printer->paperColumnWidth($paper);
 
-        $sample = ThermalPosReceiptData::sample()->withAppName((string) ($setting?->app_name ?: 'OCN ERP Suite'));
+        $sample = ThermalPosReceiptData::sample()->withAppName((string) ($setting?->app_name ?: 'BusinessCore ERP'));
         $layout = [
             'header_align' => $setting?->thermal_pos_header_align ?? 'center',
             'item_align' => $setting?->thermal_pos_item_align ?? 'left',
@@ -904,8 +904,8 @@ class ERPAdministrationMasterDataController extends Controller
         }
 
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         $profileId = $validated['label_smb_profile_id'] ?? null;
@@ -1442,8 +1442,8 @@ class ERPAdministrationMasterDataController extends Controller
         ]);
 
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         $host = trim((string) ($validated['label_lan_host'] ?? ''));
@@ -1523,8 +1523,8 @@ class ERPAdministrationMasterDataController extends Controller
     public function maintenanceMode(): Response
     {
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         return Inertia::render('ERP/Admin/MaintenanceMode', [
@@ -1572,8 +1572,8 @@ class ERPAdministrationMasterDataController extends Controller
         }
 
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
-            'app_tagline' => 'Integrated Business Platform',
+            'app_name' => 'BusinessCore ERP',
+            'app_tagline' => 'Business Operating Platform',
         ]);
 
         $setting->update([
@@ -1594,9 +1594,9 @@ class ERPAdministrationMasterDataController extends Controller
     {
         return [
             ['key' => 'coa', 'label' => 'Chart of Accounts (COA)', 'description' => 'Akun-akun COA standar PSAK, kategori kas, dan mapping COA.', 'class' => 'CoaSeeder'],
-            ['key' => 'product_categories', 'label' => 'Kategori Produk', 'description' => 'Kategori produk bisnis OCN Tech.', 'class' => 'ProductCategorySeeder'],
+            ['key' => 'product_categories', 'label' => 'Kategori Produk', 'description' => 'Kategori produk generik untuk modul inventory dan sales.', 'class' => 'ProductCategorySeeder'],
             ['key' => 'uom', 'label' => 'Satuan (UoM)', 'description' => '18 unit pengukuran dan 7 konversi.', 'class' => 'UomSeeder'],
-            ['key' => 'master_products', 'label' => 'Master Produk', 'description' => '20 produk demo CCTV/IT beserta stok awal gudang.', 'class' => 'MasterProductSeeder'],
+            ['key' => 'master_products', 'label' => 'Master Produk', 'description' => 'Data produk demo generik beserta stok awal gudang.', 'class' => 'MasterProductSeeder'],
             ['key' => 'label_profiles', 'label' => 'Profil Label', 'description' => '9 profil label thermal (ZPL & TSPL) untuk ukuran retail.', 'class' => 'LabelProfileSeeder'],
             ['key' => 'parser_rules', 'label' => 'Parser Rules Chatbot', 'description' => '35 rule parser keyword untuk chatbot ERP.', 'class' => 'ErpChatParserRuleSeeder'],
             ['key' => 'pos_receipt', 'label' => 'Template Struk POS', 'description' => 'Template struk thermal POS default.', 'class' => 'FillThermalPosReceiptTemplatesSeeder'],

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'ERP OCN System'),
+    'name' => env('APP_NAME', 'BusinessCore ERP'),
 
     /*
     |--------------------------------------------------------------------------
@@ -54,7 +54,7 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
-    'ocnetworks_launch_at' => env('OCNETWORKS_LAUNCH_AT', '2026-06-30T09:00:00+08:00'),
+    'public_launch_at' => env('PUBLIC_LAUNCH_AT', '2026-06-30T09:00:00+08:00'),
 
     /*
     |--------------------------------------------------------------------------

@@ -393,7 +393,7 @@ class ErpChatbotController extends Controller
     {
         $term = $this->extractProductTerm($message);
         if ($term === '') {
-            return 'Silakan sebutkan produk yang ingin dicek stoknya. Contoh: "stok lid cup".';
+            return 'Silakan sebutkan produk yang ingin dicek stoknya. Contoh: "stok produk contoh".';
         }
 
         $products = $this->searchProducts($term);
@@ -418,7 +418,7 @@ class ErpChatbotController extends Controller
     {
         $term = $this->extractProductTerm($message);
         if ($term === '') {
-            return 'Silakan sebutkan produk yang ingin dicek harganya. Contoh: "harga standing pouch".';
+            return 'Silakan sebutkan produk yang ingin dicek harganya. Contoh: "harga produk contoh".';
         }
 
         $products = $this->searchProducts($term);
@@ -443,7 +443,7 @@ class ErpChatbotController extends Controller
     {
         $term = $this->extractProductTerm($message);
         if ($term === '') {
-            return 'Silakan sebutkan produk yang ingin dilihat detailnya. Contoh: "detail produk lid cup".';
+            return 'Silakan sebutkan produk yang ingin dilihat detailnya. Contoh: "detail produk contoh".';
         }
 
         $products = $this->searchProducts($term);
@@ -698,9 +698,9 @@ class ErpChatbotController extends Controller
     {
         return "**📋 Fitur yang tersedia:**\n\n"
             ."**Produk & Stok**\n"
-            ."- stok lid cup\n"
-            ."- harga standing pouch\n"
-            ."- detail produk lid cup\n"
+            ."- stok produk contoh\n"
+            ."- harga produk contoh\n"
+            ."- detail produk contoh\n"
             ."- stok rendah\n"
             ."- produk terlaris\n\n"
             ."**Penjualan POS**\n"

@@ -7,7 +7,7 @@ import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { createPinia } from 'pinia';
 
-const appName = import.meta.env.VITE_APP_NAME || 'ERP OCN System';
+const appName = import.meta.env.VITE_APP_NAME || 'BusinessCore ERP';
 
 router.on('navigate', (event) => {
     const logoUrl = event.detail.page.props.erpSetting?.app_logo_url;

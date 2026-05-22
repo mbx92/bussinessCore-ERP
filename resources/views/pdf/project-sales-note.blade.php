@@ -46,7 +46,7 @@
 </head>
 <body>
 @php
-    $brand = $brand ?? ['name' => config('app.name', 'OCN ERP Suite'), 'tagline' => 'Integrated Business Platform', 'logo_data_uri' => null];
+    $brand = $brand ?? ['name' => config('app.name', 'BusinessCore ERP'), 'tagline' => 'Business Operating Platform', 'logo_data_uri' => null];
     $printedAt = $generatedAt->format('F d, Y');
     $dueDate = $generatedAt->copy()->addDays(14)->format('F d, Y');
 @endphp
@@ -69,7 +69,7 @@
                     @if($brand['logo_data_uri'])
                         <img class="logo-img" src="{{ $brand['logo_data_uri'] }}" alt="Logo">
                     @else
-                        <div class="logo-fallback">OCN</div>
+                        <div class="logo-fallback">ERP</div>
                     @endif
                     <div class="brand-name">{{ $brand['name'] }}</div>
                     <div class="brand-tagline">{{ $brand['tagline'] }}</div>

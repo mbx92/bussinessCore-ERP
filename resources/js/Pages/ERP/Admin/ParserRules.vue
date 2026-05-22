@@ -66,7 +66,7 @@ const deleteTarget = ref(null);
 const chatMessages = ref([
   {
     role: 'assistant',
-    text: 'Panel ini menguji endpoint chatbot yang sama dengan widget utama. Coba contoh seperti "stok lid cup" atau "invoice belum dibayar".',
+    text: 'Panel ini menguji endpoint chatbot yang sama dengan widget utama. Coba contoh seperti "stok produk contoh" atau "invoice belum dibayar".',
   },
 ]);
 const chatInput = ref('');

@@ -703,7 +703,7 @@ class ERPSalesController extends Controller
 
         $soldAt = $sale->sold_at ?? now();
         $data = new ThermalPosReceiptData(
-            appName: (string) ($setting?->app_name ?: 'OCN ERP Suite'),
+            appName: (string) ($setting?->app_name ?: 'BusinessCore ERP'),
             transactionNumber: (string) $sale->number,
             date: $soldAt->format('Y-m-d'),
             time: $soldAt->format('H:i'),
@@ -1222,7 +1222,7 @@ class ERPSalesController extends Controller
         }
 
         return [
-            'name' => (string) ($setting?->app_name ?: 'OCN ERP Suite'),
+            'name' => (string) ($setting?->app_name ?: 'BusinessCore ERP'),
             'tagline' => (string) ($setting?->app_tagline ?: 'Integrated Business Platform'),
             'logo_data_uri' => $logoDataUri,
         ];

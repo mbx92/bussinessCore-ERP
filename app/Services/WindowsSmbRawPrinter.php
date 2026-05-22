@@ -93,12 +93,12 @@ class WindowsSmbRawPrinter
 
     private function sampleZplForProfile(LabelProfile $p): string
     {
-        return $this->productBarcodeZpl($p, '1234567890', 'PaymentSystemOCN', $p->labelsAcross(), 'TEST');
+        return $this->productBarcodeZpl($p, '1234567890', 'BusinessCore ERP', $p->labelsAcross(), 'TEST');
     }
 
     private function sampleEplForProfile(LabelProfile $p): string
     {
-        return $this->productBarcodeEpl($p, '1234567890', 'PaymentSystemOCN', $p->labelsAcross(), 'TEST');
+        return $this->productBarcodeEpl($p, '1234567890', 'BusinessCore ERP', $p->labelsAcross(), 'TEST');
     }
 
     private function sanitizeForZplText(string $text, int $maxLen = 80): string

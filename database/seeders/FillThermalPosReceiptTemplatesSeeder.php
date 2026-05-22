@@ -15,7 +15,7 @@ class FillThermalPosReceiptTemplatesSeeder extends Seeder
     public function run(): void
     {
         $setting = ErpSetting::query()->firstOrCreate([], [
-            'app_name' => 'OCN ERP Suite',
+            'app_name' => 'BusinessCore ERP',
             'app_tagline' => 'Integrated Business Platform',
         ]);
 

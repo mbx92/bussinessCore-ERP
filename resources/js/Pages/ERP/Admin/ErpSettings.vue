@@ -8,7 +8,7 @@ const props = defineProps({
 });
 
 const form = useForm({
-  app_name: props.setting?.app_name ?? 'OCN ERP Suite',
+  app_name: props.setting?.app_name ?? 'BusinessCore ERP',
   app_tagline: props.setting?.app_tagline ?? 'Integrated Business Platform',
   app_logo: null,
   remove_logo: false,
@@ -63,7 +63,7 @@ const submit = () => {
           <div class="grid gap-4 md:grid-cols-2">
             <div class="space-y-2">
               <label class="label p-0"><span class="label-text">Nama Aplikasi</span></label>
-              <input v-model="form.app_name" type="text" class="input input-bordered w-full" placeholder="OCN ERP Suite">
+              <input v-model="form.app_name" type="text" class="input input-bordered w-full" placeholder="BusinessCore ERP">
               <p v-if="form.errors.app_name" class="text-xs text-error">{{ form.errors.app_name }}</p>
             </div>
             <div class="space-y-2">
@@ -88,7 +88,7 @@ const submit = () => {
                 </div>
                 <div v-else class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-xs font-bold text-primary">ERP</div>
                 <div>
-                  <p class="text-sm font-semibold">{{ form.app_name || 'OCN ERP Suite' }}</p>
+                  <p class="text-sm font-semibold">{{ form.app_name || 'BusinessCore ERP' }}</p>
                   <p class="text-xs text-base-content/60">{{ form.app_tagline || 'Integrated Business Platform' }}</p>
                 </div>
               </div>

@@ -29,18 +29,18 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
 
         Company::query()->firstOrCreate(
-            ['name' => 'OCN Tech'],
+            ['name' => 'Demo Holding'],
             [
-                'legal_name' => 'PT OCN Teknologi',
+                'legal_name' => 'PT Demo Holding Indonesia',
                 'tax_id' => '00.000.000.0-000.000',
                 'is_active' => true,
             ]
         );
 
         Company::query()->firstOrCreate(
-            ['name' => 'OCN Retail'],
+            ['name' => 'Demo Operations'],
             [
-                'legal_name' => 'PT OCN Retail Indonesia',
+                'legal_name' => 'PT Demo Operations Nusantara',
                 'tax_id' => null,
                 'is_active' => true,
             ]
@@ -74,10 +74,10 @@ class DatabaseSeeder extends Seeder
         }
 
         $masterProducts = [
-            ['sku' => 'PKG-SP-12X20', 'barcode' => '899100120001', 'name' => 'Standing Pouch 12x20', 'category' => 'Kemasan Plastik', 'uom' => 'pcs', 'sales_channel' => 'pos', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 1850, 'stock' => 2400, 'min_stock' => 500, 'total_sold' => 7800, 'lead_time_days' => 5],
-            ['sku' => 'PKG-PL-30X50', 'barcode' => '899100130005', 'name' => 'Plastik LDPE 30x50', 'category' => 'Kemasan Plastik', 'uom' => 'pack', 'sales_channel' => 'both', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 15000, 'stock' => 320, 'min_stock' => 100, 'total_sold' => 2350, 'lead_time_days' => 7],
-            ['sku' => 'PKG-LID-95', 'barcode' => '899100140011', 'name' => 'Lid Cup 95mm', 'category' => 'Kemasan Makanan', 'uom' => 'dus', 'sales_channel' => 'pos', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 42000, 'stock' => 85, 'min_stock' => 120, 'total_sold' => 1420, 'lead_time_days' => 10],
-            ['sku' => 'CCTV-UTP-CAT6', 'barcode' => '899200110001', 'name' => 'Kabel UTP Cat6', 'category' => 'Material CCTV', 'uom' => 'roll', 'sales_channel' => 'project', 'product_type' => 'project_material', 'status' => 'active', 'selling_price' => 775000, 'stock' => 42, 'min_stock' => 20, 'total_sold' => 180, 'lead_time_days' => 14],
+            ['sku' => 'GEN-FG-001', 'barcode' => '899100120001', 'name' => 'Produk Contoh A', 'category' => 'Barang Umum', 'uom' => 'pcs', 'sales_channel' => 'pos', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 1850, 'stock' => 2400, 'min_stock' => 500, 'total_sold' => 7800, 'lead_time_days' => 5],
+            ['sku' => 'GEN-FG-002', 'barcode' => '899100130005', 'name' => 'Produk Contoh B', 'category' => 'Barang Umum', 'uom' => 'pack', 'sales_channel' => 'both', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 15000, 'stock' => 320, 'min_stock' => 100, 'total_sold' => 2350, 'lead_time_days' => 7],
+            ['sku' => 'GEN-FG-003', 'barcode' => '899100140011', 'name' => 'Produk Contoh C', 'category' => 'Barang Konsumsi', 'uom' => 'box', 'sales_channel' => 'pos', 'product_type' => 'finished_goods', 'status' => 'active', 'selling_price' => 42000, 'stock' => 85, 'min_stock' => 120, 'total_sold' => 1420, 'lead_time_days' => 10],
+            ['sku' => 'GEN-PM-001', 'barcode' => '899200110001', 'name' => 'Material Proyek Contoh', 'category' => 'Material Proyek', 'uom' => 'roll', 'sales_channel' => 'project', 'product_type' => 'project_material', 'status' => 'active', 'selling_price' => 775000, 'stock' => 42, 'min_stock' => 20, 'total_sold' => 180, 'lead_time_days' => 14],
         ];
 
         foreach ($masterProducts as $product) {
@@ -85,12 +85,12 @@ class DatabaseSeeder extends Seeder
         }
 
         $warehouseToko = Warehouse::query()->firstOrCreate(
-            ['code' => 'TOKO'],
-            ['name' => 'Warehouse Toko', 'address' => 'Toko', 'is_active' => true]
+            ['code' => 'MAIN'],
+            ['name' => 'Main Warehouse', 'address' => 'Main Operations', 'is_active' => true]
         );
         $warehouseCctv = Warehouse::query()->firstOrCreate(
-            ['code' => 'CCTV'],
-            ['name' => 'Warehouse CCTV', 'address' => 'CCTV', 'is_active' => true]
+            ['code' => 'PROJ'],
+            ['name' => 'Project Warehouse', 'address' => 'Project Logistics', 'is_active' => true]
         );
 
         $allProducts = MasterProduct::query()->get();
@@ -111,7 +111,7 @@ class DatabaseSeeder extends Seeder
             ['type' => 'in', 'qty' => 120],
             ['type' => 'out', 'qty' => 90],
         ];
-        $productsForMovement = MasterProduct::query()->whereIn('sku', ['PKG-SP-12X20', 'PKG-PL-30X50', 'PKG-LID-95'])->get();
+        $productsForMovement = MasterProduct::query()->whereIn('sku', ['GEN-FG-001', 'GEN-FG-002', 'GEN-FG-003'])->get();
         foreach ($productsForMovement as $product) {
             for ($month = 1; $month <= 12; $month++) {
                 foreach ($movementTemplates as $template) {
@@ -129,9 +129,9 @@ class DatabaseSeeder extends Seeder
         }
 
         $categories = [
-            ['name' => 'Kemasan Plastik', 'description' => 'Produk kemasan plastik', 'status' => 'active'],
-            ['name' => 'Kemasan Makanan', 'description' => 'Produk kemasan makanan', 'status' => 'active'],
-            ['name' => 'Material CCTV', 'description' => 'Material project CCTV', 'status' => 'active'],
+            ['name' => 'Barang Umum', 'description' => 'Kategori barang umum untuk penjualan dan stok.', 'status' => 'active'],
+            ['name' => 'Barang Konsumsi', 'description' => 'Kategori barang konsumsi atau retail.', 'status' => 'active'],
+            ['name' => 'Material Proyek', 'description' => 'Kategori material yang digunakan untuk delivery project.', 'status' => 'active'],
         ];
         foreach ($categories as $category) {
             ProductCategory::query()->firstOrCreate(['name' => $category['name']], $category);
@@ -194,26 +194,26 @@ class DatabaseSeeder extends Seeder
         $vendors = [
             [
                 'code' => 'SUP-001',
-                'name' => 'PT Plastik Nusantara',
-                'email' => 'sales@plastik-nusantara.test',
+                'name' => 'PT Vendor Satu',
+                'email' => 'sales@vendor-satu.test',
                 'phone' => '0812-0000-0001',
                 'address' => 'Jl. Industri Raya No. 88, Bekasi',
                 'tax_id' => '01.234.567.8-901.000',
                 'payment_terms' => 'Net 14',
                 'lead_time_days' => 7,
-                'notes' => 'Supplier utama kemasan plastik food grade.',
+                'notes' => 'Vendor contoh utama untuk kebutuhan operasional.',
                 'is_active' => true,
             ],
             [
                 'code' => 'SUP-002',
-                'name' => 'CV Kemasan Prima',
-                'email' => 'order@kemasan-prima.test',
+                'name' => 'CV Vendor Dua',
+                'email' => 'order@vendor-dua.test',
                 'phone' => '0812-0000-0002',
                 'address' => 'Jl. Raya Bogor KM 28, Cibinong',
                 'tax_id' => '02.345.678.9-012.000',
                 'payment_terms' => 'Net 7',
                 'lead_time_days' => 5,
-                'notes' => 'Lead time cepat untuk order kecil.',
+                'notes' => 'Vendor contoh cadangan untuk order skala kecil.',
                 'is_active' => true,
             ],
         ];
@@ -227,9 +227,9 @@ class DatabaseSeeder extends Seeder
 
         $plastikVendor = Vendor::query()->where('code', 'SUP-001')->first();
         $primaVendor = Vendor::query()->where('code', 'SUP-002')->first();
-        $productA = MasterProduct::query()->where('sku', 'PKG-SP-12X20')->first();
-        $productB = MasterProduct::query()->where('sku', 'PKG-PL-30X50')->first();
-        $productC = MasterProduct::query()->where('sku', 'PKG-LID-95')->first();
+        $productA = MasterProduct::query()->where('sku', 'GEN-FG-001')->first();
+        $productB = MasterProduct::query()->where('sku', 'GEN-FG-002')->first();
+        $productC = MasterProduct::query()->where('sku', 'GEN-FG-003')->first();
 
         if ($plastikVendor && $primaVendor && $productA && $productB && $productC) {
             $po1 = PurchaseOrder::query()->updateOrCreate(
@@ -305,11 +305,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call(CoaSeeder::class);
         $this->call(OpeningBalanceSeeder::class);
-        $this->call(ProductCategorySeeder::class);
         $this->call(UomSeeder::class);
         $this->call(WarehouseSeeder::class);
-        $this->call(MasterProductSeeder::class);
         $this->call(LabelProfileSeeder::class);
-        $this->call(ProjectFlowSeeder::class);
     }
 }

@@ -48,9 +48,9 @@ const seedAndFillDevLogin = async () => {
             <div class="hidden lg:flex flex-col justify-between bg-[#08111f] p-10 text-white">
                 <div>
                     <div class="w-12 h-12 ocn-brand-mark rounded-2xl flex items-center justify-center mb-8">
-                        <span class="font-black">OCN</span>
+                        <span class="font-black">BC</span>
                     </div>
-                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200/80">ERP OCN System</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-200/80">BusinessCore ERP</p>
                     <h2 class="mt-3 text-4xl font-bold tracking-tight leading-tight">Satu sistem kerja untuk operasional harian.</h2>
                     <p class="mt-4 text-sm text-slate-300/85 leading-relaxed">
                         Kelola sales, project, inventory, dan administrasi dari satu dashboard dengan data yang sinkron.
@@ -76,10 +76,10 @@ const seedAndFillDevLogin = async () => {
                 <!-- Logo -->
                 <div class="flex flex-col items-start gap-2 mb-8">
                     <div class="w-12 h-12 ocn-brand-mark rounded-xl flex items-center justify-center lg:hidden">
-                        <span class="text-primary-content font-bold text-lg">OCN</span>
+                        <span class="text-primary-content font-bold text-lg">BC</span>
                     </div>
                     <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary/70">Sign In</p>
-                    <h1 class="text-3xl font-bold tracking-tight leading-tight">Masuk ke ERP OCN System</h1>
+                    <h1 class="text-3xl font-bold tracking-tight leading-tight">Masuk ke BusinessCore ERP</h1>
                     <p class="text-sm leading-relaxed text-base-content/70">Gunakan akun yang sudah terdaftar untuk melanjutkan pekerjaan Anda.</p>
                 </div>
 
@@ -96,7 +96,7 @@ const seedAndFillDevLogin = async () => {
                             autocomplete="username"
                             class="input input-bordered w-full"
                             :class="form.errors.email ? 'input-error' : ''"
-                            placeholder="admin@ocn.test"
+                            placeholder="admin@businesscore.test"
                         />
                         <p v-if="form.errors.email" class="text-error text-xs mt-1">{{ form.errors.email }}</p>
                     </div>
