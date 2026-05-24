@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\ErpSetting;
 use App\Services\AppInstallationService;
+use App\Services\ModuleLifecycleManager;
 use App\Support\EnabledModuleRegistry;
 use Closure;
 use Illuminate\Http\Request;
@@ -11,11 +12,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EnsureModuleEnabled
 {
-    public function __construct(private readonly AppInstallationService $installationService)
+    public function __construct(
+        private readonly AppInstallationService $installationService,
+        private readonly ModuleLifecycleManager $moduleLifecycleManager,
+    )
     {
     }
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, ?string $explicitModuleKey = null): Response
     {
         if (! $this->installationService->status()['installed']) {
             return $next($request);
@@ -26,10 +30,13 @@ class EnsureModuleEnabled
             return $next($request);
         }
 
-        $routeName = $request->route()?->getName();
-        $moduleKey = EnabledModuleRegistry::moduleForRouteName($routeName);
+        $moduleKey = $explicitModuleKey;
+        if (! is_string($moduleKey) || $moduleKey === '') {
+            $routeName = $request->route()?->getName();
+            $moduleKey = EnabledModuleRegistry::moduleForRouteName($routeName);
+        }
 
-        if ($moduleKey === null || $setting->isModuleEnabled($moduleKey)) {
+        if ($moduleKey === null || $this->moduleLifecycleManager->isEnabled($moduleKey, $setting)) {
             return $next($request);
         }
 

@@ -8,6 +8,23 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 import { createPinia } from 'pinia';
 
 const appName = import.meta.env.VITE_APP_NAME || 'BusinessCore ERP';
+const corePages = import.meta.glob('./Pages/**/*.vue');
+const modulePages = import.meta.glob('../../modules/*/resources/js/Pages/**/*.vue');
+
+const resolveAppPage = async (name) => {
+    const corePath = `./Pages/${name}.vue`;
+    if (corePages[corePath]) {
+        return resolvePageComponent(corePath, corePages);
+    }
+
+    const suffix = `/Pages/${name}.vue`;
+    const modulePath = Object.keys(modulePages).find((path) => path.endsWith(suffix));
+    if (modulePath) {
+        return resolvePageComponent(modulePath, modulePages);
+    }
+
+    throw new Error(`Inertia page not found: ${name}`);
+};
 
 router.on('navigate', (event) => {
     const logoUrl = event.detail.page.props.erpSetting?.app_logo_url;
@@ -36,11 +53,7 @@ router.on('navigate', (event) => {
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob('./Pages/**/*.vue'),
-        ),
+    resolve: (name) => resolveAppPage(name),
     setup({ el, App, props, plugin }) {
         return createApp({ render: () => h(App, props) })
             .use(plugin)

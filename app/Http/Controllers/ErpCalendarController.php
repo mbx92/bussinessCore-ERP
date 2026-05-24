@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\ERP\Accounting\Models\Payable;
 use App\ERP\Accounting\Models\Receivable;
-use App\ERP\CRM\Models\CrmActivity;
-use App\ERP\CRM\Models\CrmPipeline;
 use App\ERP\Purchasing\Models\PurchaseOrder;
 use App\Models\Project;
 use App\Models\ProjectPayment;
@@ -14,6 +12,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\CRM\Models\CrmActivity;
+use Modules\CRM\Models\CrmPipeline;
 
 class ErpCalendarController extends Controller
 {

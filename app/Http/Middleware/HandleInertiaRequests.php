@@ -8,15 +8,18 @@ use App\Models\ErpSetting;
 use App\Models\MasterProduct;
 use App\Models\User;
 use App\Services\AppInstallationService;
+use App\Services\ModuleLifecycleManager;
 use App\Support\AppNotificationCenter;
-use App\Support\EnabledModuleRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    public function __construct(private readonly AppInstallationService $installationService)
+    public function __construct(
+        private readonly AppInstallationService $installationService,
+        private readonly ModuleLifecycleManager $moduleLifecycleManager,
+    )
     {
     }
 
@@ -89,7 +92,9 @@ class HandleInertiaRequests extends Middleware
                 'installed' => (bool) $installStatus['installed'],
                 'database_ready' => (bool) $installStatus['database_ready'],
                 'tables_ready' => (bool) $installStatus['tables_ready'],
-                'enabled_modules' => $erpSetting?->enabledModuleKeys() ?? EnabledModuleRegistry::allModuleKeys(),
+                'enabled_modules' => $installStatus['tables_ready']
+                    ? $this->moduleLifecycleManager->enabledModuleKeys($erpSetting)
+                    : $this->moduleLifecycleManager->allModuleKeys(),
             ],
             'erpCompanyContext' => fn () => $this->erpCompanyContextProps($request),
             'uiPreferences' => fn () => $user ? $user->resolvedUiPreferences() : User::defaultUiPreferences(),

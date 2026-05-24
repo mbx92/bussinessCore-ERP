@@ -16,7 +16,7 @@ final class ModuleWorkspaceRegistry
      */
     public static function definitions(): array
     {
-        return [
+        $definitions = [
             'accounting' => [
                 'label' => 'Accounting',
                 'menus' => [
@@ -123,6 +123,22 @@ final class ModuleWorkspaceRegistry
                 ],
             ],
         ];
+
+        foreach (ModuleManifestReader::manifests() as $moduleKey => $manifest) {
+            $menus = $manifest['menus'] ?? null;
+            if (! is_array($menus)) {
+                continue;
+            }
+
+            $definitions[$moduleKey] = [
+                'label' => is_string($manifest['name'] ?? null) ? $manifest['name'] : ($definitions[$moduleKey]['label'] ?? ucfirst($moduleKey)),
+                'menus' => array_values(array_filter($menus, static fn (mixed $menu): bool => is_array($menu))),
+            ];
+        }
+
+        ksort($definitions);
+
+        return $definitions;
     }
 
     /**

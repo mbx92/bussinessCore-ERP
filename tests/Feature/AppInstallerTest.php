@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ErpSetting;
+use App\Models\SystemModule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -68,6 +69,10 @@ class AppInstallerTest extends TestCase
         $setting = ErpSetting::query()->firstOrFail();
         $this->assertNotNull($setting->installed_at);
         $this->assertSame(['accounting', 'sales', 'inventory'], $setting->enabledModuleKeys());
+        $this->assertDatabaseHas('system_modules', [
+            'key' => 'accounting',
+            'status' => SystemModule::STATUS_ENABLED,
+        ]);
 
         $admin = User::query()->where('email', 'owner@businesscore.test')->first();
         $this->assertNotNull($admin);

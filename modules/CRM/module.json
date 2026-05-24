@@ -1,0 +1,49 @@
+{
+  "key": "crm",
+  "name": "CRM",
+  "version": "1.0.0",
+  "description": "Lead, customer, pipeline, dan aktivitas follow-up.",
+  "providers": [
+    "Modules\\CRM\\Providers\\CRMServiceProvider"
+  ],
+  "dependencies": [
+    "core"
+  ],
+  "route_prefixes": [
+    "erp.crm."
+  ],
+  "permissions": [
+    "erp.crm.manage",
+    "menu.erp.crm"
+  ],
+  "menus": [
+    {
+      "key": "lead-management",
+      "title": "Lead Management",
+      "description": "Pusat data calon customer, sumber lead, status prospek, dan PIC follow-up.",
+      "route": "erp.crm.leads",
+      "icon": "user-circle"
+    },
+    {
+      "key": "customer-database",
+      "title": "Customer Database",
+      "description": "Master customer lintas sub usaha agar histori komunikasi dan transaksi tetap terhubung.",
+      "route": "erp.crm.customers",
+      "icon": "identification"
+    },
+    {
+      "key": "pipeline-penjualan",
+      "title": "Pipeline Penjualan",
+      "description": "Tahapan penawaran, deal value, dan peluang closing yang bisa dipantau tim.",
+      "route": "erp.crm.pipelines",
+      "icon": "clipboard-list"
+    },
+    {
+      "key": "aktivitas-follow-up",
+      "title": "Aktivitas Follow-up",
+      "description": "Log call, chat, meeting, reminder, dan next action untuk setiap prospek/customer.",
+      "route": "erp.crm.activities",
+      "icon": "share"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\ERP\CRM\Models\CrmCustomer;
+use Modules\CRM\Models\CrmCustomer;
 use App\Http\Middleware\ErpMaintenanceMode;
 use App\Http\Middleware\LogErpActivity;
 use App\Models\User;

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\ERP\CRM\Models\CrmCustomer;
+use Modules\CRM\Models\CrmCustomer;
 use App\Models\Project;
 use App\Models\ProjectType;
 use App\Models\User;

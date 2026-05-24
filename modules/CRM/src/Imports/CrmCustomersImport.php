@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Imports;
+namespace Modules\CRM\Imports;
 
-use App\ERP\CRM\Models\CrmCustomer;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Modules\CRM\Models\CrmCustomer;
 
 class CrmCustomersImport implements ToCollection, WithHeadingRow
 {

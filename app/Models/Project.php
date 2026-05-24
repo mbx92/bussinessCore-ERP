@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use App\ERP\CRM\Models\CrmCustomer;
 use App\ERP\Shared\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\CRM\Models\CrmCustomer;
 
 class Project extends Model
 {

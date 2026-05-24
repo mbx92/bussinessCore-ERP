@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\ModulePermissionRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -12,7 +13,7 @@ class UserRolePermissionController extends Controller
 {
     public function index(Request $request)
     {
-        $definitions = collect(config('erp_menu_permissions', []));
+        $definitions = collect(ModulePermissionRegistry::menuDefinitions());
         $allowedNames = $definitions->pluck('name')->all();
 
         $names = User::ASSIGNABLE_ROLE_NAMES;
@@ -64,7 +65,7 @@ class UserRolePermissionController extends Controller
             abort(404);
         }
 
-        $allowed = collect(config('erp_menu_permissions', []))->pluck('name')->all();
+        $allowed = collect(ModulePermissionRegistry::menuDefinitions())->pluck('name')->all();
 
         $validated = $request->validate([
             'permissions' => ['present', 'array'],

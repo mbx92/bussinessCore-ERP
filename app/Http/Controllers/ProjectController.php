@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\ERP\Accounting\Models\Account;
 use App\ERP\Core\Services\ErpCompanyResolver;
-use App\ERP\CRM\Models\CrmCustomer;
 use App\ERP\Inventory\Models\Warehouse;
 use App\Models\CashCategory;
 use App\Models\MasterProduct;
@@ -29,6 +28,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Modules\CRM\Models\CrmCustomer;
 
 class ProjectController extends Controller
 {

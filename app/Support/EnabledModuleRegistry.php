@@ -9,7 +9,7 @@ final class EnabledModuleRegistry
      */
     public static function installableModules(): array
     {
-        return [
+        $legacy = [
             'accounting' => ['label' => 'Accounting', 'description' => 'Cashflow, COA, rekonsiliasi, pembayaran, dan utilitas akuntansi.'],
             'sales' => ['label' => 'Sales', 'description' => 'POS, transaksi penjualan, dan invoice project.'],
             'purchasing' => ['label' => 'Purchasing', 'description' => 'Supplier, purchase order, goods receipt, dan reorder planning.'],
@@ -23,6 +23,17 @@ final class EnabledModuleRegistry
             'cms' => ['label' => 'Website CMS', 'description' => 'Landing site, media library, dan CMS publik.'],
             'personal' => ['label' => 'Personal', 'description' => 'Workspace keuangan personal pengguna.'],
         ];
+
+        foreach (ModuleManifestReader::manifests() as $moduleKey => $manifest) {
+            $legacy[$moduleKey] = [
+                'label' => is_string($manifest['name'] ?? null) ? $manifest['name'] : ($legacy[$moduleKey]['label'] ?? ucfirst($moduleKey)),
+                'description' => is_string($manifest['description'] ?? null) ? $manifest['description'] : ($legacy[$moduleKey]['description'] ?? ''),
+            ];
+        }
+
+        ksort($legacy);
+
+        return $legacy;
     }
 
     /**
@@ -37,6 +48,23 @@ final class EnabledModuleRegistry
     {
         if (! is_string($routeName) || $routeName === '') {
             return null;
+        }
+
+        foreach (ModuleManifestReader::manifests() as $moduleKey => $manifest) {
+            $prefixes = $manifest['route_prefixes'] ?? [];
+            if (! is_array($prefixes)) {
+                continue;
+            }
+
+            foreach ($prefixes as $prefix) {
+                if (! is_string($prefix) || $prefix === '') {
+                    continue;
+                }
+
+                if ($routeName === rtrim($prefix, '.') || str_starts_with($routeName, $prefix)) {
+                    return $moduleKey;
+                }
+            }
         }
 
         $map = [

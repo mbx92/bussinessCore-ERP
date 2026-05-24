@@ -14,7 +14,6 @@ return [
     ['name' => 'menu.erp.projects', 'label' => 'Projects', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.rnd', 'label' => 'R&D', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.hr', 'label' => 'HR', 'group' => 'Modul ERP'],
-    ['name' => 'menu.erp.crm', 'label' => 'CRM', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.calendar', 'label' => 'Calendar', 'group' => 'Modul ERP'],
     ['name' => 'menu.erp.reporting', 'label' => 'Reporting', 'group' => 'Modul ERP'],
 

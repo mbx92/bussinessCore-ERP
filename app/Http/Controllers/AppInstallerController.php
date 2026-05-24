@@ -9,7 +9,9 @@ use App\ERP\Core\Models\FiscalPeriod;
 use App\Models\ErpSetting;
 use App\Models\User;
 use App\Services\AppInstallationService;
+use App\Services\ModuleLifecycleManager;
 use App\Support\EnabledModuleRegistry;
+use App\Support\ModulePermissionRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +27,10 @@ use Spatie\Permission\Models\Role;
 
 class AppInstallerController extends Controller
 {
-    public function __construct(private readonly AppInstallationService $installationService)
+    public function __construct(
+        private readonly AppInstallationService $installationService,
+        private readonly ModuleLifecycleManager $moduleLifecycleManager,
+    )
     {
     }
 
@@ -41,6 +46,7 @@ class AppInstallerController extends Controller
         return Inertia::render('Installer/Setup', [
             'moduleOptions' => collect(EnabledModuleRegistry::installableModules())
                 ->map(fn (array $meta, string $key): array => ['key' => $key, ...$meta])
+                ->sortBy('label')
                 ->values()
                 ->all(),
             'defaults' => [
@@ -188,6 +194,8 @@ class AppInstallerController extends Controller
             $admin->syncRoles(['admin']);
         });
 
+        $this->moduleLifecycleManager->markInstalledAndEnabled($validated['modules']);
+
         $this->installationService->persistDatabaseConfig($databaseConfig);
 
         $request->session()->put('installer_completed', true);
@@ -227,17 +235,19 @@ class AppInstallerController extends Controller
             Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
         }
 
-        $menuPermissionNames = collect(config('erp_menu_permissions', []))
+        $registeredPermissionNames = ModulePermissionRegistry::permissionNames();
+
+        foreach ($registeredPermissionNames as $permissionName) {
+            Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+        }
+
+        $menuPermissionNames = collect(ModulePermissionRegistry::menuDefinitions())
             ->pluck('name')
             ->filter(fn ($name) => is_string($name) && $name !== '')
             ->values()
             ->all();
 
-        foreach ($menuPermissionNames as $menuName) {
-            Permission::firstOrCreate(['name' => $menuName, 'guard_name' => 'web']);
-        }
-
-        $adminPermissions = array_values(array_unique(array_merge($permissions, $menuPermissionNames)));
+        $adminPermissions = array_values(array_unique(array_merge($permissions, $registeredPermissionNames, $menuPermissionNames)));
         Role::findByName('admin')->syncPermissions($adminPermissions);
     }
 

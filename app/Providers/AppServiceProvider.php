@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\ERP\HR\Models\Employee;
+use App\Services\ModuleLifecycleManager;
+use App\Support\ModuleManifestReader;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -19,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->registerEnabledModuleProviders();
     }
 
     /**
@@ -46,5 +48,35 @@ class AppServiceProvider extends ServiceProvider
         Route::bind('employee', fn (string $value) => Employee::whereKey($value)->firstOrFail());
 
         Gate::define('manage-rnd', fn (User $user): bool => $user->hasRole('admin') || $user->hasPermissionTo('manage-rnd'));
+    }
+
+    private function registerEnabledModuleProviders(): void
+    {
+        try {
+            $enabledModules = app(ModuleLifecycleManager::class)->enabledModuleKeys();
+        } catch (\Throwable) {
+            $enabledModules = [];
+        }
+
+        if ($enabledModules === []) {
+            return;
+        }
+
+        $manifests = ModuleManifestReader::manifests();
+
+        foreach ($enabledModules as $moduleKey) {
+            $providers = $manifests[$moduleKey]['providers'] ?? [];
+            if (! is_array($providers)) {
+                continue;
+            }
+
+            foreach ($providers as $providerClass) {
+                if (! is_string($providerClass) || $providerClass === '' || ! class_exists($providerClass)) {
+                    continue;
+                }
+
+                $this->app->register($providerClass);
+            }
+        }
     }
 }

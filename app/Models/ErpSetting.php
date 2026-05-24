@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ModuleLifecycleManager;
 use App\Support\EnabledModuleRegistry;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -161,23 +162,12 @@ class ErpSetting extends Model
      */
     public function enabledModuleKeys(): array
     {
-        $modules = $this->enabled_modules;
-
-        if (! is_array($modules) || $modules === []) {
-            return EnabledModuleRegistry::allModuleKeys();
-        }
-
-        $allowed = array_fill_keys(EnabledModuleRegistry::allModuleKeys(), true);
-
-        return array_values(array_filter(
-            array_unique(array_map('strval', $modules)),
-            static fn (string $key): bool => isset($allowed[$key]),
-        ));
+        return app(ModuleLifecycleManager::class)->enabledModuleKeys($this);
     }
 
     public function isModuleEnabled(string $moduleKey): bool
     {
-        return in_array($moduleKey, $this->enabledModuleKeys(), true);
+        return app(ModuleLifecycleManager::class)->isEnabled($moduleKey, $this);
     }
 
     public function getIsInstalledAttribute(): bool

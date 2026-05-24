@@ -1,15 +1,16 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace Modules\CRM\Http\Controllers;
 
-use App\ERP\CRM\Models\CrmActivity;
-use App\ERP\CRM\Models\CrmCustomer;
-use App\ERP\CRM\Models\CrmLead;
-use App\ERP\CRM\Models\CrmPipeline;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Modules\CRM\Models\CrmActivity;
+use Modules\CRM\Models\CrmCustomer;
+use Modules\CRM\Models\CrmLead;
+use Modules\CRM\Models\CrmPipeline;
 
 class CrmActivityController extends Controller
 {
@@ -52,7 +53,7 @@ class CrmActivityController extends Controller
                 'crm_customer_id' => $a->crm_customer_id,
                 'customer_name' => $a->customer ? ($a->customer->company ?: $a->customer->name) : null,
                 'crm_pipeline_id' => $a->crm_pipeline_id,
-                'pipeline_title' => $a->pipeline ? "{$a->pipeline->code} — {$a->pipeline->title}" : null,
+                'pipeline_title' => $a->pipeline ? "{$a->pipeline->code} - {$a->pipeline->title}" : null,
                 'user_id' => $a->user_id,
                 'user_name' => $a->user?->name,
                 'created_at' => $a->created_at?->format('Y-m-d H:i'),
